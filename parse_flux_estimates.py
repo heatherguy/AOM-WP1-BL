@@ -282,12 +282,12 @@ def main():
             
         
             # Store 20Hz info for each run
-            try:
-                nc_comp.variables['sonic_air_temperature'][i,:] = m['T_corrected'].to_numpy(dtype='float32')
-                valminmax(nc_comp,'sonic_air_temperature',m['T_corrected'].to_numpy(dtype='float32'))
-            except:
-                print('error %s'%k)
-                continue
+            #try:
+            nc_comp.variables['sonic_air_temperature'][i,:] = m['T_corrected'].to_numpy(dtype='float32')
+            valminmax(nc_comp,'sonic_air_temperature',m['T_corrected'].to_numpy(dtype='float32'))
+            #except:
+            #    print('error %s'%k)
+            #    continue
     
             #nc_comp.variables['sonic_temperature_theta'][i,:] = m['theta'].to_numpy()
             nc_comp.variables['eastward_wind_rotated_to_run'][i,:] = m['u'].to_numpy(dtype='float32')
