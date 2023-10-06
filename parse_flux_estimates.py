@@ -266,7 +266,7 @@ def main():
 
         m_g = m_rot.groupby(pd.Grouper(freq='%sMin'%avp))    
         #keys = list(m_g.groups.keys())
-        keys = pd.date_range(start,start+dt.timedelta(hours=24),freq='%smin'%avp)
+        keys = pd.date_range(start,start+dt.timedelta(hours=24),freq='%smin'%avp)[:-1]
     
         for i in range(0,len(keys)):       
             k=keys[i]
