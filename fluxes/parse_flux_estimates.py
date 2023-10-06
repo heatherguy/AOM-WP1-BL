@@ -176,9 +176,16 @@ def main():
         NC_Dimensions(nc_est, len_time)  
 
         time_list = pd.date_range(day,day+pd.Timedelta(days=1),freq='%smin'%avp)[:-1]
-        lat_list = gps_lats.resample('30min').mean()[:-1].to_numpy()
-        lon_list = gps_lons.resample('30min').mean()[:-1].to_numpy()
+        lat_list = gps_lats.resample('%smin'%avp).mean()[:-1].to_numpy()
+        lon_list = gps_lons.resample('%smin'%avp).mean()[:-1].to_numpy()
 
+        # Set geospatial bounds
+        # top left corner, bottom right corner presented as : 
+        # latitude longitude, latitude longitude (signed decimal)
+        bbox='%sN %sE, %sN %sE'%(np.nanmax(lat_list),np.nanmin(lon_list),np.nanmin(lat_list),np.nanmax(lon_list))
+        nc_est.setncattr('geospatial_bounds', bbox)
+        nc_comp.setncattr('geospatial_bounds', bbox)
+        
         NC_CommonVariables(nc_comp, time_list,lat_list,lon_list, np)
         NC_CommonVariables(nc_est, time_list,lat_list,lon_list, np)    
     
