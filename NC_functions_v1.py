@@ -196,8 +196,8 @@ def NC_Dimensions(fn_nc, len_time,index=False):
     
     """
     fn_nc.createDimension('time', len_time )
-    fn_nc.createDimension('latitude', len_time)
-    fn_nc.createDimension('longitude', len_time) 
+    #fn_nc.createDimension('latitude', len_time)
+    #fn_nc.createDimension('longitude', len_time) 
     if index:
         index = fn_nc.createDimension('index', index)
     
