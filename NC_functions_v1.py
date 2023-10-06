@@ -168,8 +168,8 @@ def NC_CommonVariables(fn_nc, time_list,lat_list,lon_list, np):
     lats.long_name = 'Latitude'
     lats.cell_method= 'time: point'
     lats[:] = lat_list
-    lats.valid_min= np.float32(min(lat_list))
-    lats.valid_max= np.float32(max(lat_list))
+    lats.valid_min= np.float32(np.nanmin(lat_list))
+    lats.valid_max= np.float32(np.nanmax(lat_list))
    
     lons = fn_nc.createVariable('longitude', np.float32, ('longitude',))
     #variable attributes
@@ -178,8 +178,8 @@ def NC_CommonVariables(fn_nc, time_list,lat_list,lon_list, np):
     lons.long_name = 'Longitude'
     lons.cell_method= 'time: point'
     lons[:] = lon_list
-    lons.valid_min= np.float32(min(lon_list))
-    lons.valid_max= np.float32(max(lon_list))
+    lons.valid_min= np.float32(np.nanmin(lon_list))
+    lons.valid_max= np.float32(np.nanmax(lon_list))
    
    
     return
