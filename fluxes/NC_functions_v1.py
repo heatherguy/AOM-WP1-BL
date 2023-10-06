@@ -58,7 +58,7 @@ def NC_SpecificVariables(fn_nc, var, np):
     return
 
 
-def NC_CommonVariables(fn_nc, time_list, np):
+def NC_CommonVariables(fn_nc, time_list,lat_list,lon_list, np):
     """
     Writes common variables to netCDF file. 
     
@@ -166,14 +166,21 @@ def NC_CommonVariables(fn_nc, time_list, np):
     lats.type = 'float32'
     lats.units = 'degree_north'
     lats.long_name = 'Latitude'
-    lats[:] = [72.572962]
+    lats.cell_method= 'time: point'
+    lats[:] = lat_list
+    lats.valid_min= np.float32(min(lat_list))
+    lats.valid_max= np.float32(max(lat_list))
    
     lons = fn_nc.createVariable('longitude', np.float32, ('longitude',))
     #variable attributes
     lons.type = 'float32'
     lons.units = 'degree_east'
     lons.long_name = 'Longitude'
-    lons[:] = [-38.470361]
+    lons.cell_method= 'time: point'
+    lons[:] = lon_list
+    lons.valid_min= np.float32(min(lon_list))
+    lons.valid_max= np.float32(max(lon_list))
+   
    
     return
       
@@ -189,8 +196,8 @@ def NC_Dimensions(fn_nc, len_time,index=False):
     
     """
     fn_nc.createDimension('time', len_time )
-    fn_nc.createDimension('latitude', 1)
-    fn_nc.createDimension('longitude', 1) 
+    fn_nc.createDimension('latitude', len_time)
+    fn_nc.createDimension('longitude', len_time) 
     if index:
         index = fn_nc.createDimension('index', index)
     
