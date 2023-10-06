@@ -13,27 +13,24 @@ import datetime as dt
 import pandas as pd
 import os
 import sys
-#sys.path.append('/Users/heather/Desktop/ace-ceda-master/parse-scripts')
-#sys.path.append('/Users/heather/Desktop/ARTofMELT/process-scripts')
+#sys.path.append('/Users/heather/Desktop/AOM-WP1-BL/fluxes')
 
 from NC_functions_v1 import *
 from flux_functions import *
 from netCDF4 import Dataset, date2num
-import warnings
-warnings.filterwarnings("ignore")
 import glob
 
 ####### INPUTS #######
 # Data location:
-#in_loc = '/Users/heather/Desktop/ARTofMELT/ice-station-data/'
-#out_loc = '/Users/heather/Desktop/ARTofMELT/ice-station-data/fluxes/'
+#in_loc = '/gws/nopw/j04/ncas_radar_vol1/heather/AoM2023/ice-station-data/'
+#out_loc = '/gws/nopw/j04/ncas_radar_vol1/heather/AoM2023/ice-station-data/fluxes/'
 
-#start='201909010000'
-#stop='201909020000'
+#start='202305120000'
+#stop='202306160000'
 #avp=30
 
 #Example usage: 
-# python parse_flux_estimates_aom.py $in_loc $out_loc $start $stop $avp
+# python parse_flux_estimates.py $in_loc $out_loc $start $stop $avp
 #############################################################
 
 
@@ -89,13 +86,13 @@ def main():
         sys.exit()
         
     # Global attributes
-    meta_f = '/Users/heather/Desktop/ARTofMELT/process-scripts/flux_metadata_%smin.xlsx'%(avp)
+    meta_f = os.getcwd()+'/meta-data/flux_metadata_%smin.xlsx'%(avp)
     meta = pd.read_excel(meta_f)
 
-    var_f_estimates = '/Users/heather/Desktop/ARTofMELT/process-scripts/flux-estimates-level1.xlsx'
+    var_f_estimates = os.getcwd()+'/meta-data/flux-estimates-level1.xlsx'
     var_estimates = pd.read_excel(var_f_estimates)
 
-    var_f_components = '/Users/heather/Desktop/ARTofMELT/process-scripts/flux-components-level1.xlsx'
+    var_f_components = os.getcwd()+'/meta-data/flux-components-level1.xlsx'
     var_components = pd.read_excel(var_f_components)
 
     sf = 20   # sampling frequency (20Hz)
@@ -105,8 +102,6 @@ def main():
     m = avp * 60 * sf # Sample length of interval
     # Make sure m is even
     m=np.fix(m/2)*2
-    #df = sf/m                    # Frequency intervals
-    #f = np.arange(df,sf/2+df,df) # Frequency timeseries
 
     # Loop through each day: 
 
@@ -136,7 +131,7 @@ def main():
             continue
             
         # Get HMP data
-        HMP_fils = glob.glob(in_loc+'ice-station-2/%s*.HMP110'%dt.datetime.strftime(day.date(),'%y%m%d'))
+        HMP_fils = glob.glob(in_loc+'raw/%s*.HMP110'%dt.datetime.strftime(day.date(),'%y%m%d'))
         HMP_fils.sort()
         headers=['y','m','d','h','min','s','T=','Ta','units_Ta','RH=','rh','%RH','Td=','Td','units_Td']
         all_pdfs=[]
