@@ -20,6 +20,9 @@ from flux_functions import *
 from netCDF4 import Dataset, date2num
 import glob
 
+import warnings
+warnings.filterwarnings("ignore")
+
 ####### INPUTS #######
 # Data location:
 #in_loc = '/gws/nopw/j04/ncas_radar_vol1/heather/AoM2023/ice-station-data/'
