@@ -161,7 +161,7 @@ def NC_CommonVariables(fn_nc, time_list,lat_list,lon_list, np):
     #write data
     doys[:] = np.float32(np.asarray([time_list[i].timetuple().tm_yday for i in range(0,len(time_list))]))
     
-    lats = fn_nc.createVariable('latitude', np.float32, ('latitude',))
+    lats = fn_nc.createVariable('latitude', np.float32, ('time',))
     #variable attributes
     lats.type = 'float32'
     lats.units = 'degree_north'
@@ -171,7 +171,7 @@ def NC_CommonVariables(fn_nc, time_list,lat_list,lon_list, np):
     lats.valid_min= np.float32(np.nanmin(lat_list))
     lats.valid_max= np.float32(np.nanmax(lat_list))
    
-    lons = fn_nc.createVariable('longitude', np.float32, ('longitude',))
+    lons = fn_nc.createVariable('longitude', np.float32, ('time',))
     #variable attributes
     lons.type = 'float32'
     lons.units = 'degree_east'
