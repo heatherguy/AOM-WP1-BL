@@ -142,7 +142,7 @@ def rotate_to_run(m,avp):
         u1 = m['x']*np.cos(theta) + m['y']*np.sin(theta)
         v1 = -m['x']*np.sin(theta) + m['y']*np.cos(theta)
         w1 = m['z']
-
+        
         # Next rotate u and w so that x-axis lies along mean streamline and 
         # mean(w) is zero
         
@@ -155,12 +155,12 @@ def rotate_to_run(m,avp):
         # to align u with mean wind (degrees)
         
         m['theta'] = theta*180/np.pi
-
+        
         # phi is tilt angle (+ve tilts x-axis upwards) to align x-axis with
         # mean streamline and force <w>=0
         
         m['phi'] = phi*180/np.pi
-
+        
         m_out = pd.concat([m_out, m])
     return m_out
 
