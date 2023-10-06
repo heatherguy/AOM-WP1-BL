@@ -137,10 +137,9 @@ def main():
         headers=['y','m','d','h','min','s','T=','Ta','units_Ta','RH=','rh','%RH','Td=','Td','units_Td']
         all_pdfs=[]
         for fil in HMP_fils:
-            all_pdfs.append(pd.read_csv(fil,delim_whitespace=True,names=headers,parse_dates=[[0,1,2,3,4,5]],index_col=0))
+            all_pdfs.append(pd.read_csv(fil,delim_whitespace=True,names=headers,parse_dates=[[0,1,2,3,4,5]],index_col=0, date_format='%Y %m %d %H %M %S.%f'))
     
         HMP = pd.concat(all_pdfs)
-        HMP.index = pd.to_datetime(HMP.index,format='%Y %m %d %H %M %S.%f')
 
         # Get GPS data
         gps_fils = glob.glob(in_loc+'raw/%s*.GPS'%dt.datetime.strftime(day.date(),'%y%m%d'))
@@ -176,8 +175,8 @@ def main():
         NC_Dimensions(nc_est, len_time)  
 
         time_list = pd.date_range(day,day+pd.Timedelta(days=1),freq='%smin'%avp)[:-1]
-        lat_list = gps_lats.resample('%smin'%avp).mean()[:-1].to_numpy()
-        lon_list = gps_lons.resample('%smin'%avp).mean()[:-1].to_numpy()
+        lat_list = gps_lats.resample('%smin'%avp).mean().reindex(time_list).to_numpy()
+        lon_list = gps_lats.resample('%smin'%avp).mean().reindex(time_list).to_numpy()
 
         # Set geospatial bounds
         # top left corner, bottom right corner presented as : 
