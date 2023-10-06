@@ -662,6 +662,7 @@ def main():
             nc_est.variables['kinematic_sonic_temperature_flux'][i]  = np.float32(wprimetsprimebar)
             valminmax(nc_est,'kinematic_sonic_temperature_flux',np.float32(wprimetsprimebar)) 
             nc_est.variables['kinematic_heat_flux'][i]  = wprimethetaprimebar
+            valminmax(nc_est,'kinematic_heat_flux',np.float32(wprimethetaprimebar))
             nc_est.variables['momentum_flux_u'][i]  = np.float32(- rho * wprimeuprimebar)
             valminmax(nc_est,'momentum_flux_u', np.float32(- rho * wprimeuprimebar)) 
             nc_est.variables['momentum_flux_v'][i]  = np.float32(- rho * wprimevprimebar)
