@@ -160,7 +160,8 @@ def rotate_to_run(m,avp):
         # mean streamline and force <w>=0
         
         m['phi'] = phi*180/np.pi
-        m_out = m_out.append(m)
+
+        m_out = pd.concat([m_out, m])
     return m_out
 
 
