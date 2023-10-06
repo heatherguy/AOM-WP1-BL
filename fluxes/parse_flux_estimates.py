@@ -131,6 +131,7 @@ def main():
             continue
             
         # Get HMP data
+
         HMP_fils = glob.glob(in_loc+'raw/%s*.HMP110'%dt.datetime.strftime(day.date(),'%y%m%d'))
         HMP_fils.sort()
         headers=['y','m','d','h','min','s','T=','Ta','units_Ta','RH=','rh','%RH','Td=','Td','units_Td']
@@ -140,6 +141,19 @@ def main():
     
         HMP = pd.concat(all_pdfs)
         HMP.index = pd.to_datetime(HMP.index,format='%Y %m %d %H %M %S.%f')
+
+        # Get GPS data
+        gps_fils = glob.glob(in_loc+'raw/%s*.GPS'%dt.datetime.strftime(day.date(),'%y%m%d'))
+        gps_fils.sort()
+        all_pdfs=[]
+        for fil in gps_fils:
+            all_pdfs.append(pd.read_csv(fil,delim_whitespace=True,parse_dates=[[0,1,2,3,4,5]],index_col=0, date_format='%Y %m %d %H %M %S.%f',header=None))
+
+        gps = pd.concat(all_pdfs)
+        gps_lats = pd.to_numeric(gps[12],errors='coerce')/100
+        gps_lats.loc[gps[13]!='N'] = -gps_lats.loc[gps[13]!='N']
+        gps_lons = pd.to_numeric(gps[14],errors='coerce')/100
+        gps_lons.loc[gps[15]!='E'] = gps_lons.loc[gps[15]!='E']
   
         # Set up netcdf files.
     
@@ -160,11 +174,13 @@ def main():
 
         NC_Dimensions(nc_comp, len_time,len_index)
         NC_Dimensions(nc_est, len_time)  
-   
-        time_list = pd.date_range(day,day+pd.Timedelta(days=1),freq='%smin'%avp)[:-1]
 
-        NC_CommonVariables(nc_comp, time_list, np)
-        NC_CommonVariables(nc_est, time_list, np)    
+        time_list = pd.date_range(day,day+pd.Timedelta(days=1),freq='%smin'%avp)[:-1]
+        lat_list = gps_lats.resample('30min').mean()[:-1].to_numpy()
+        lon_list = gps_lons.resample('30min').mean()[:-1].to_numpy()
+
+        NC_CommonVariables(nc_comp, time_list,lat_list,lon_list, np)
+        NC_CommonVariables(nc_est, time_list,lat_list,lon_list, np)    
     
         NC_SpecificVariables(nc_comp, var_components, np)
         NC_SpecificVariables(nc_est, var_estimates, np)    
