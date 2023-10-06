@@ -178,8 +178,8 @@ def main():
         NC_Dimensions(nc_est, len_time)  
 
         time_list = pd.date_range(day,day+pd.Timedelta(days=1),freq='%smin'%avp)[:-1]
-        lat_list = gps_lats.resample('%smin'%avp).mean().reindex(time_list).to_numpy()
-        lon_list = gps_lons.resample('%smin'%avp).mean().reindex(time_list).to_numpy()
+        lat_list = gps_lats.resample('%smin'%avp).mean().reindex(time_list,method='nearest').to_numpy()
+        lon_list = gps_lons.resample('%smin'%avp).mean().reindex(time_list,method='nearest').to_numpy()
 
         # Set geospatial bounds
         # top left corner, bottom right corner presented as : 
