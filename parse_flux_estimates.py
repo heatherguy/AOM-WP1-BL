@@ -270,8 +270,6 @@ def main():
     
         for i in range(0,len(keys)):       
             k=keys[i]
-            print(i)
-            print(k)
             try:
                 m = m_g.get_group(k)
             except:
