@@ -266,12 +266,12 @@ def main():
 
         m_g = m_rot.groupby(pd.Grouper(freq='%sMin'%avp))    
         #keys = list(m_g.groups.keys())
-        keys = pd.date_range(start,start+dt.timedelta(hours=24),freq='%smin'%avp)[:-1]
+        keys = pd.date_range(day,day+dt.timedelta(hours=24),freq='%smin'%avp)[:-1]
     
         for i in range(0,len(keys)):       
             k=keys[i]
             print(k)
-            print(m_g.groups.keys())
+            #print(m_g.groups.keys())
             #try:
             m = m_g.get_group(k)
             #except:
