@@ -28,8 +28,8 @@ warnings.filterwarnings("ignore")
 #in_loc = '/gws/nopw/j04/ncas_radar_vol1/heather/AoM2023/ice-station-data/'
 #out_loc = '/gws/nopw/j04/ncas_radar_vol1/heather/AoM2023/ice-station-data/fluxes/'
 
-#start='202305120000'
-#stop='202306160000'
+#start='202306060000'
+#stop='202306070000'
 #avp=30
 
 #Example usage: 
@@ -273,7 +273,8 @@ def main():
             try:
                 m = m_g.get_group(k)
             except:
-                # If this part of the file is missing, skip all. 
+                # If this part of the file is missing, skip all.
+                print('Cannot find data for %s'%k)
                 continue
 
             # Interpolate over data gaps that are smaller than around 6 minutes (60% data for 15 min period)
