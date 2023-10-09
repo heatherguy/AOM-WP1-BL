@@ -270,6 +270,8 @@ def main():
     
         for i in range(0,len(keys)):       
             k=keys[i]
+            print(k)
+            print(m_g.groups.keys())
             #try:
             m = m_g.get_group(k)
             #except:
