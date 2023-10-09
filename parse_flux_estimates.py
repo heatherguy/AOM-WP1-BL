@@ -26,7 +26,7 @@ warnings.filterwarnings("ignore")
 ####### INPUTS #######
 # Data location:
 #in_loc = '/gws/nopw/j04/ncas_radar_vol1/heather/AoM2023/ice-station-data/'
-#out_loc = '/gws/nopw/j04/ncas_radar_vol1/heather/AoM2023/ice-station-data/fluxes/'
+#out_loc = '/gws/nopw/j04/ncas_radar_vol1/heather/AoM2023/ice-station-data/final_nc/'
 
 #start='202306060000'
 #stop='202306070000'
@@ -159,7 +159,7 @@ def main():
   
         # Set up netcdf files.
     
-        f1 = 'icestation-flux' #instrument name
+        f1 = 'icestation' #instrument name
         f2 = 'ARTofMELT' #platform name  
         f3 = dt.datetime.strftime(day,'%Y%m%d')
         f5 = "v1" #version number
@@ -270,14 +270,14 @@ def main():
     
         for i in range(0,len(keys)):       
             k=keys[i]
-            print(k)
+            #print(k)
             #print(m_g.groups.keys())
-            #try:
-            m = m_g.get_group(k)
-            #except:
-            #    # If this part of the file is missing, skip all.
-            #    print('Cannot find data for %s'%k)
-             #   continue
+            try:
+                m = m_g.get_group(k)
+            except:
+                # If this part of the file is missing, skip all.
+                print('Cannot find data for %s'%k)
+                continue
 
             # Interpolate over data gaps that are smaller than around 6 minutes (60% data for 15 min period)
 
