@@ -216,7 +216,7 @@ def main():
         P = licor['P']          # 2m air pressure form licor, Pa
         m_rot['P']= P
 
-        m_rot['height']=np.ones(len(m_rot['height'])) * 4 # 4 m above ice surface
+        m_rot['height']=np.ones(len(m_rot)) * 4 # 4 m above ice surface
        
         Nconc = licor['H2OD']      # H2O number concentration from licor, mol/m3
         m_rot['Nconc']=Nconc
