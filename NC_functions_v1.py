@@ -220,7 +220,7 @@ def NC_Global_Attributes(fn_nc, meta, start_date,end_date):
     import numpy as np
     name = meta.loc[:, 'Name':'Name':1].values
     exp = meta.loc[:, 'Example':'Example':1].values
-    pos = exp[32]
+    pos = exp[31]
     pos = str(pos[0])
     ix1 = pos.find('N')
     ix2 = pos.find(' ')
@@ -231,7 +231,7 @@ def NC_Global_Attributes(fn_nc, meta, start_date,end_date):
     except:
         lat = np.nan
         lon=np.nan
-    pos = exp[33]
+    pos = exp[32]
     pos = pos[0]
     ix1 = pos.find('m')
     base_height = np.float32(pos[0:ix1])
