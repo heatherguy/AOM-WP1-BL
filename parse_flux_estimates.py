@@ -270,12 +270,12 @@ def main():
     
         for i in range(0,len(keys)):       
             k=keys[i]
-            try:
-                m = m_g.get_group(k)
-            except:
-                # If this part of the file is missing, skip all.
-                print('Cannot find data for %s'%k)
-                continue
+            #try:
+            m = m_g.get_group(k)
+            #except:
+            #    # If this part of the file is missing, skip all.
+            #    print('Cannot find data for %s'%k)
+             #   continue
 
             # Interpolate over data gaps that are smaller than around 6 minutes (60% data for 15 min period)
 
