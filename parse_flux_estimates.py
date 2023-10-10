@@ -335,6 +335,7 @@ def main():
                 thetaprime = np.nan
             
             nc_comp.variables['thetaprime'][i,:] = thetaprime 
+            valminmax(nc_comp,'thetaprime',thetaprime )
             
             try: 
                 tsprime = detrend(m['T_corrected'])
@@ -446,8 +447,9 @@ def main():
             valminmax(nc_comp,'qbar',np.float32(qbar) )
             
             thetabar = m['theta'].mean()
-            nc_comp.variables['thetabar'][i] = thetabar        
-            
+            nc_comp.variables['thetabar'][i] = thetabar  
+            valminmax(nc_comp,'thetabar',np.float32(thetabar) )
+               
             tsbar = m['T_corrected'].mean()
             nc_comp.variables['tsbar'][i] = np.float32(tsbar) 
             valminmax(nc_comp,'tsbar',np.float32(tsbar) ) 
