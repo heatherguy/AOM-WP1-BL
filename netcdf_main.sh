@@ -22,6 +22,7 @@ stop_dat='202306120000'
 #python parse_surface-met.py $in_loc $netcdf_out $start_dat $stop_dat
 
 python parse_flux_estimates.py $in_loc $netcdf_out $start_dat $stop_dat 30
+python parse_flux_estimates.py $in_loc $netcdf_out $start_dat $stop_dat 20
 python parse_flux_estimates.py $in_loc $netcdf_out $start_dat $stop_dat 15
 
 
