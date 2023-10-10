@@ -334,7 +334,8 @@ def main():
                 qprime = np.nan      
                 thetaprime = np.nan
             
-            nc_comp.variables['thetaprime'][i,:] = thetaprime 
+            nc_comp.variables['thetaprime'][i,:] = np.float32(thetaprime)
+            print(np.float(thetaprime))
             valminmax(nc_comp,'thetaprime',thetaprime )
             
             try: 
@@ -447,7 +448,7 @@ def main():
             valminmax(nc_comp,'qbar',np.float32(qbar) )
             
             thetabar = m['theta'].mean()
-            nc_comp.variables['thetabar'][i] = thetabar  
+            nc_comp.variables['thetabar'][i] = np.float32(thetabar)
             valminmax(nc_comp,'thetabar',np.float32(thetabar) )
                
             tsbar = m['T_corrected'].mean()
