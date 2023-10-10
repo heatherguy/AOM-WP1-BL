@@ -335,8 +335,8 @@ def main():
                 thetaprime = np.nan
             
             nc_comp.variables['thetaprime'][i,:] = np.float32(thetaprime)
-            print(np.float32(thetaprime))
             valminmax(nc_comp,'thetaprime',thetaprime )
+            print(nc_comp.variables['thetaprime'].valid_min)
             
             try: 
                 tsprime = detrend(m['T_corrected'])
