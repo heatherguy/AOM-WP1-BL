@@ -335,7 +335,7 @@ def main():
                 thetaprime = np.nan
             
             nc_comp.variables['thetaprime'][i,:] = np.float32(thetaprime)
-            print(np.float(thetaprime))
+            print(np.float32(thetaprime))
             valminmax(nc_comp,'thetaprime',thetaprime )
             
             try: 
