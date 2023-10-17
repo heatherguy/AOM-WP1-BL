@@ -193,11 +193,11 @@ def main():
         df['T']= df['T']+ 273.15
 
         # Append to relavent dataframe
-        try:              
-            m1 = m1.append(df)
-        except:
-            print('Data error with %s'%f)
-            continue
+        #try             
+        m1 = m1.append(df)
+        #except:
+        #    print('Data error with %s'%f)
+        #    continue
             
     # crop data for date/time
     m1=m1[start:stop]
