@@ -25,8 +25,8 @@ import sys
 #in_loc = '/Users/heather/Desktop/ARTofMELT/ice-station-data/'
 #save = 'Desktop/ARTofMELT/ice-station-data/metek_processed/'
 
-#start='202305160000'
-#stop='202305220000'
+#start='20230516'
+#stop='20230522'
 
 #Example usage: 
 # python process_metek.py $in_loc $start $stop $save
@@ -40,8 +40,8 @@ def get_args(args_in):
     try:
         dpath = args_in[1]
         save = args_in[4]
-        start = dt.datetime.strptime(args_in[2],'%Y%m%d%H%M')
-        stop = dt.datetime.strptime(args_in[3],'%Y%m%d%H%M')
+        start = dt.datetime.strptime(args_in[2],'%Y%m%d')
+        stop = dt.datetime.strptime(args_in[3],'%Y%m%d')
     except:
         print('Input error')
         sys.exit()
