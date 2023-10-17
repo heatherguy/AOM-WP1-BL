@@ -54,6 +54,7 @@ def main():
     Extracts 3D sonic data from raw output. 
     Cleans bad data.
     Converts to SI units.
+    NOTE: THIS IS FOR USA METEK-100 CORRECTS Left-handed to right-handed coordinate (-ve y)
     Saves as .csv if requested
     
     Parameters:
@@ -174,10 +175,20 @@ def main():
         df = df.sort_values('Date')
         df.index = pd.DatetimeIndex(df.index)
         #df = df[~df.index.duplicated()]
-               
+
+        # metek usa100 coordinate system: 
+        # it's left-handed. If you just multiply the y-axis velocity by -1 
+        # that sets it all back to something sensible.
+
+        # metek.x = data(:,7)/100; % m/s +ve to North
+        # metek.y = -data(:,8)/100; % m/s +ve to East
+        #metek.z = data(:,9)/100; % m/s +ve up
+        # metek.sontemp = data(:,10)/100; % degC
+        
         # Change units from cm/s to m/s, (* 0.01), and T to kelvin
+        
         df['x']=df['x']*0.01
-        df['y']=df['y']*0.01
+        df['y']= - df['y']*0.01
         df['z']=df['z']*0.01
         df['T']= df['T']+ 273.15
 
