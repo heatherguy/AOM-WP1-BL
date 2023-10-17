@@ -194,7 +194,7 @@ def main():
 
         # Append to relavent dataframe
         #try             
-        m1 = pd.append(df,m1)
+        m1 = pd.concat([m1, df])
         #except:
         #    print('Data error with %s'%f)
         #    continue
