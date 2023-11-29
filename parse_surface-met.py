@@ -267,7 +267,7 @@ def main():
 
     nc.variables['air_pressure'][:]=pressure.to_numpy()/100 # hPa
     nc.variables['air_temperature'][:]=trh['temperature'].to_numpy()+273.15 # Kelvin
-    nc.variables['relative_humidity'][:]==trh['rh'].to_numpy()
+    nc.variables['relative_humidity'][:]=trh['rh'].to_numpy()
     nc.variables['wind_speed'][:]=m_vector['wind_speed'].to_numpy()
     nc.variables['wind_from_direction'][:]=m_vector['wind_from_direction'].to_numpy()
     nc.variables['downwelling_longwave_flux_in_air'][:]=downwelling_longwave_flux_in_air.to_numpy()
