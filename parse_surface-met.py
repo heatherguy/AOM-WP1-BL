@@ -254,12 +254,11 @@ def main():
 
     NC_Global_Attributes(nc, meta, start,stop - pd.Timedelta(minutes=1))
     NC_Dimensions(nc, len(time_list), index=6)  
-    NC_CommonVariables(nc, time_list, np)
     NC_CommonVariables(nc, time_list,met_corrected['latitude'].to_numpy(),met_corrected['longitude'].to_numpy(), np)
     NC_SpecificVariables(nc, var, np)
 
     # Write in data
-    
+
     nc.variables['air_pressure'][:]=pressure.to_numpy()/100 # hPa
     nc.variables['air_temperature'][:]=trh['temperature'].to_numpy()+273.15 # Kelvin
     nc.variables['relative_humidity'][:]==trh['rh'].to_numpy()
