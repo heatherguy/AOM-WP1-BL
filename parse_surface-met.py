@@ -232,8 +232,8 @@ def main():
     # qc_flag_skin_temperature
 
     print('Extracting KT15 data...')
-    kt1_fils = glob.glob(in_loc+'*.KT15')
-    kt2_fils = glob.glob(in_loc+'*.KT15-1')
+    kt1_fils = glob.glob(in_loc+'raw/*.KT15')
+    kt2_fils = glob.glob(in_loc+'raw/*.KT15-1')
     kt1_fils.sort()
     kt2_fils.sort()
     kt1,kt1_amb,kt1_qc = get_kt15(kt1_fils,1)
