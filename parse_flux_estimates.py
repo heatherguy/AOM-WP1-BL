@@ -17,6 +17,7 @@ import sys
 
 from NC_functions_v1 import *
 from flux_functions import *
+from surface_met_functions import get_gps, correct_gps
 from netCDF4 import Dataset, date2num
 import glob
 
@@ -147,15 +148,13 @@ def main():
         # Get GPS data
         gps_fils = glob.glob(in_loc+'raw/%s*.GPS'%dt.datetime.strftime(day.date(),'%y%m%d'))
         gps_fils.sort()
-        all_pdfs=[]
-        for fil in gps_fils:
-            all_pdfs.append(pd.read_csv(fil,delim_whitespace=True,parse_dates=[[0,1,2,3,4,5]],index_col=0, date_format='%Y %m %d %H %M %S.%f',header=None))
+        gps,met_latlon = get_gps(gps_fils)
+        # Apply correction for step change 
+        met_corrected=correct_gps(met_latlon,['longitude','latitude'])
 
         gps = pd.concat(all_pdfs)
-        gps_lats = pd.to_numeric(gps[12],errors='coerce')/100
-        gps_lats.loc[gps[13]!='N'] = -gps_lats.loc[gps[13]!='N']
-        gps_lons = pd.to_numeric(gps[14],errors='coerce')/100
-        gps_lons.loc[gps[15]!='E'] = gps_lons.loc[gps[15]!='E']
+        gps_lats = met_corrected['latitude']
+        gps_lons = met_corrected['longitude']
   
         # Set up netcdf files.
     
