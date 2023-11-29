@@ -58,9 +58,11 @@ def get_args(args_in):
     # get values:
     in_loc = args_in[1]
     out_loc = args_in[2]
+    start = args_in[3]
+    stop = args_in[4]
 
     # return values:
-    return in_loc,out_loc
+    return in_loc,out_loc,start,stop
 
 def main():
     """
