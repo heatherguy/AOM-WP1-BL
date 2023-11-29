@@ -58,8 +58,8 @@ def get_args(args_in):
     # get values:
     in_loc = args_in[1]
     out_loc = args_in[2]
-    start = args_in[3]
-    stop = args_in[4]
+    start = dt.datetime.strftime(args_in[3],'%Y%m%d%H%M')
+    stop = dt.datetime.strftime(args_in[4],'%Y%m%d%H%M')
 
     # return values:
     return in_loc,out_loc,start,stop
