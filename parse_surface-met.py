@@ -89,10 +89,10 @@ def main():
     # Get GPS data
 
     print('Extracting GPS data...')
-    gps_fils1 = glob.glob(in_loc+'*.GPS')
-    gps_fils2 = glob.glob(in_loc+'radiometer_stand/*.gps')
+    gps_fils1 = glob.glob(in_loc+'raw/*.GPS')
+    gps_fils2 = glob.glob(in_loc+'raw/*.gps')
     gps1,met_latlon = get_gps(glob.glob(in_loc+'*.GPS'))
-    gps2,rad_latlon = get_gps(glob.glob(in_loc+'radiometer_stand/*.gps'))
+    gps2,rad_latlon = get_gps(glob.glob(in_loc+'*.gps'))
     # Apply correction for step change 
     met_corrected=correct_gps(met_latlon,['longitude','latitude']).reindex(time_list,method='nearest',tolerance='1min')
     rad_corrected = correct_gps(rad_latlon,['longitude','latitude']).reindex(time_list,method='nearest',tolerance='1min')
@@ -114,7 +114,7 @@ def main():
     # Get HMP110 data
 
     print('Extracting HMP110 data...')
-    hmp_fils = glob.glob(in_loc+'*.HMP110')
+    hmp_fils = glob.glob(in_loc+'raw/*.HMP110')
     trh=(get_hmp(hmp_fils)).reindex(time_list,method='nearest',tolerance='1min')
     #qc_flag_relative_humidity
     qc_flag_relative_humidity=np.ones(len(trh))
@@ -191,7 +191,7 @@ def main():
     # Get radiation data
 
     print('Extracting radiometer data...')
-    rad_fils= glob.glob(in_loc+'radiometer_stand/*_CR1000_Kipp-and-Zonen_radiation_KnZRad.dat')
+    rad_fils= glob.glob(in_loc+'raw/*_CR1000_Kipp-and-Zonen_radiation_KnZRad.dat')
     qcfil = 'radiometer_qc.txt'
     radiation = get_rad(rad_fils,qcfil)
     rad_one_min = radiation.resample('1min').mean().reindex(time_list,method='nearest',tolerance='1min')
@@ -219,7 +219,7 @@ def main():
     # Get HFP and snow temperature profile
 
     print('Extracting HFP data...')
-    hfpfils=[dloc+'ice-station-1/IceStation1_CR1000_Ice_T-Profile_TC_HFP.dat',dloc+'ice-station-2/IceStation2_CR1000_Ice_T-Profile_TC_HFP.dat']
+    hfpfils=[in_loc+'raw/IceStation1_CR1000_Ice_T-Profile_TC_HFP.dat',in_loc+'raw/IceStation2_CR1000_Ice_T-Profile_TC_HFP.dat']
     ice_to_snow_heat_flux,qc_ice_to_snow_heat_flux,thermistor_string = get_hf(hfpfils)
 
 
@@ -231,7 +231,7 @@ def main():
 
     print('Extracting KT15 data...')
     kt1_fils = glob.glob(in_loc+'*.KT15')
-    kt2_fils = glob.glob(in_loc+'radiometer_stand/*.KT15-1')
+    kt2_fils = glob.glob(in_loc+'*.KT15-1')
     kt1_fils.sort()
     kt2_fils.sort()
     kt1,kt1_amb,kt1_qc = get_kt15(kt1_fils,1)
