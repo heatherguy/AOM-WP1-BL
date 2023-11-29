@@ -257,6 +257,12 @@ def main():
     NC_CommonVariables(nc, time_list,met_corrected['latitude'].to_numpy(),met_corrected['longitude'].to_numpy(), np)
     NC_SpecificVariables(nc, var, np)
 
+    # Set geospatial bounds
+    # top left corner, bottom right corner presented as : 
+    # latitude longitude, latitude longitude (signed decimal)
+    bbox='%sN %sE, %sN %sE'%(np.nanmax(met_corrected['latitude'].to_numpy()),np.nanmin(met_corrected['longitude'].to_numpy()),np.nanmin(met_corrected['latitude'].to_numpy()),np.nanmax(met_corrected['longitude'].to_numpy()))
+    nc.setncattr('geospatial_bounds', bbox)
+    
     # Write in data
 
     nc.variables['air_pressure'][:]=pressure.to_numpy()/100 # hPa
