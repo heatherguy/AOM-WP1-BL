@@ -93,8 +93,8 @@ def main():
     print('Extracting GPS data...')
     gps_fils1 = glob.glob(in_loc+'raw/*.GPS')
     gps_fils2 = glob.glob(in_loc+'raw/*.gps')
-    gps1,met_latlon = get_gps(glob.glob(in_loc+'*.GPS'))
-    gps2,rad_latlon = get_gps(glob.glob(in_loc+'*.gps'))
+    gps1,met_latlon = get_gps(glob.glob(in_loc+'raw/*.GPS'))
+    gps2,rad_latlon = get_gps(glob.glob(in_loc+'raw/*.gps'))
     # Apply correction for step change 
     met_corrected=correct_gps(met_latlon,['longitude','latitude']).reindex(time_list,method='nearest',tolerance='1min')
     rad_corrected = correct_gps(rad_latlon,['longitude','latitude']).reindex(time_list,method='nearest',tolerance='1min')
