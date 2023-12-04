@@ -227,7 +227,7 @@ def main():
     print('Extracting HFP data...')
     hfpfils=[in_loc+'raw/IceStation1_CR1000_Ice_T-Profile_TC_HFP.dat',in_loc+'raw/IceStation2_CR1000_Ice_T-Profile_TC_HFP.dat']
     ice_to_snow_heat_flux,qc_ice_to_snow_heat_flux,thermistor_string = get_hf(hfpfils)
-
+    ice_to_snow = pd.DataFrame(index=ice_to_snow_heat_flux.index,data={'flux':ice_to_snow_heat_flux,'qc':qc_ice_to_snow_heat_flux}).reindex(time_list,method='nearest',tolerance='1min')
 
     # Get KT15 data
     # K
@@ -281,7 +281,7 @@ def main():
     nc.variables['upwelling_shortwave_flux_in_air'][:]=upwelling_shortwave_flux_in_air.to_numpy()
     nc.variables['upwelling_total_irradiance'][:]=upwelling_total_irradiance.to_numpy()
     nc.variables['net_total_irradiance'][:]=net_total_irradiance.to_numpy()
-    nc.variables['ice_to_snow_heat_flux'][:]=ice_to_snow_heat_flux.reindex(time_list,method='nearest',tolerance='1min').to_numpy()
+    nc.variables['ice_to_snow_heat_flux'][:]=ice_to_snow['flux'].to_numpy()
     nc.variables['skin_temperature_1'][:]=kt1.reindex(time_list,method='nearest',tolerance='1min').to_numpy()
     nc.variables['skin_temperature_2'][:]=kt2.reindex(time_list,method='nearest',tolerance='1min').to_numpy()
 
@@ -300,7 +300,7 @@ def main():
     nc.variables['qc_flag_wind_from_direction'][:]=qc_flag_wind_from_direction
     nc.variables['qc_flag_downwelling_radiation'][:]=qc_flag_downwelling_radiation
     nc.variables['qc_flag_upwelling_radiation'][:]=qc_flag_upwelling_radiation
-    nc.variables['qc_flag_ice_to_snow_heat_flux'][:]=qc_ice_to_snow_heat_flux
+    nc.variables['qc_flag_ice_to_snow_heat_flux'][:]=ice_to_snow['qc'].to_numpy()
     qc_snow = flatten(np.transpose(thermistor_string['qc'].reindex(time_list,method='nearest',tolerance='1min').to_numpy()))
     nc.variables['qc_flag_snow_temperature'][:]=qc_snow
     nc.variables['qc_flag_skin_temperature_1'][:]=np.transpose(pd.DataFrame(index=kt1.index,data=kt1_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy())
@@ -321,7 +321,7 @@ def main():
     valminmax(nc,'upwelling_shortwave_flux_in_air',qc_flag_upwelling_radiation)
     valminmax(nc,'upwelling_total_irradiance',qc_flag_upwelling_radiation)
     valminmax(nc,'net_total_irradiance',qc_flag_downwelling_radiation)
-    valminmax(nc,'ice_to_snow_heat_flux',qc_ice_to_snow_heat_flux)
+    valminmax(nc,'ice_to_snow_heat_flux',ice_to_snow['qc'].to_numpy())
     valminmax(nc,'snow_temperature',np.transpose(np.tile(qc_snow, (6, 1))))
     valminmax(nc,'height_relative_to_snow_surface',np.ones(6))
     valminmax(nc,'skin_temperature_1',flatten(np.transpose(pd.DataFrame(index=kt1.index,data=kt1_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy())))
