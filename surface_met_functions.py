@@ -291,7 +291,7 @@ def get_hf(infils):
 
     # sanity check
     thermistor_string.loc[(thermistor_string>283).any(axis=1),'qc']=2   
-    thermistor_string.loc[(thermistor_string>223).any(axis=1),'qc']=2
+    thermistor_string.loc[((thermistor_string<223)&(thermistor_string>3)).any(axis=1),'qc']=2
 
     # QC for instrument log
     # polar bear destruction
