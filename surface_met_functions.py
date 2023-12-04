@@ -295,7 +295,7 @@ def get_hf(infils):
 
     # QC for instrument log
     # polar bear destruction
-    thermistor_string.loc[dt.datetime(2023,6,10,21,15):dt.datetime(2023,6,11,14),'qc']=3
+    thermistor_string.loc[dt.datetime(2023,6,10,21,15):dt.datetime(2023,6,11,17),'qc']=3
     # suspect data 
     thermistor_string.loc[dt.datetime(2023,5,18,4):dt.datetime(2023,5,18,4),'qc']=3
     
