@@ -299,8 +299,8 @@ def main():
     nc.variables['qc_flag_wind_from_direction'][:]=qc_flag_wind_from_direction
     nc.variables['qc_flag_downwelling_radiation'][:]=qc_flag_downwelling_radiation
     nc.variables['qc_flag_upwelling_radiation'][:]=qc_flag_upwelling_radiation
-    nc.variables['qc_ice_to_snow_heat_flux'][:]=pd.DataFrame(index=ice_to_snow_heat_flux.index,data=qc_ice_to_snow_heat_flux).reindex(time_list,method='nearest',tolerance='1min').to_numpy()
-    nc.variables['qc_snow_temperature'][:]=thermistor_string['qc'].reindex(time_list,method='nearest',tolerance='1min').to_numpy()
+    nc.variables['qc_flag_ice_to_snow_heat_flux'][:]=pd.DataFrame(index=ice_to_snow_heat_flux.index,data=qc_ice_to_snow_heat_flux).reindex(time_list,method='nearest',tolerance='1min').to_numpy()
+    nc.variables['qc_flag_snow_temperature'][:]=thermistor_string['qc'].reindex(time_list,method='nearest',tolerance='1min').to_numpy()
     nc.variables['qc_flag_skin_temperature_1'][:]=pd.DataFrame(index=kt1.index,data=kt1_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy()
     nc.variables['qc_flag_skin_temperature_2'][:]=pd.DataFrame(index=kt2.index,data=kt2_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy()
                  
