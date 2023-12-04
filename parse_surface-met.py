@@ -35,21 +35,24 @@ warnings.filterwarnings("ignore")
 # python parse_surface-met.py $in_loc $out_loc $start_1 $stop_1
 #############################################################
 
-def valminmax(ncf,varn):  
+def valminmax(ncf,varn,qc): 
+    if np.shape(qc)!= np.shape(ncf.variables[varn][:]):
+        print('Invalid qc for %s'%varn)
+        return
+    
+    # only valid max/min where qc==1 
+    arr = ncf.variables[varn][:][np.where(qc==1)]
+
     if isinstance(ncf.variables[varn].valid_min,str):
-        ncf.variables[varn].valid_min=np.nanmin(ncf.variables[varn][:])
-        ncf.variables[varn].valid_max=np.nanmax(ncf.variables[varn][:])
+        ncf.variables[varn].valid_min=np.nanmin(arr)
+        ncf.variables[varn].valid_max=np.nanmax(arr)
     if np.isnan(ncf.variables[varn].valid_min):
-        ncf.variables[varn].valid_min=np.nanmin(ncf.variables[varn][:])
-        ncf.variables[varn].valid_max=np.nanmax(ncf.variables[varn][:])
-    if np.nanmin(ncf.variables[varn][:])< ncf.variables[varn].valid_min:
-        ncf.variables[varn].valid_min=np.nanmin(ncf.variables[varn][:])
-    try:
-        if np.nanmax(ncf.variables[varn][:])> ncf.variables[varn].valid_max:
-            ncf.variables[varn].valid_max=np.nanmax(ncf.variables[varn][:])
-    except:
-        if np.nanmax([ncf.variables[varn][:]])> ncf.variables[varn].valid_max:
-            ncf.variables[varn].valid_max=np.nanmax([ncf.variables[varn][:]])   
+        ncf.variables[varn].valid_min=np.nanmin(arr)
+        ncf.variables[varn].valid_max=np.nanmax(arr)
+    if np.nanmin(arr)< ncf.variables[varn].valid_min:
+        ncf.variables[varn].valid_min=np.nanmin(arr)
+    if np.nanmax(arr)> ncf.variables[varn].valid_max:
+        ncf.variables[varn].valid_max=np.nanmax(arr)
 
 def get_args(args_in):
     """
@@ -302,25 +305,25 @@ def main():
     nc.variables['qc_flag_skin_temperature_2'][:]=pd.DataFrame(index=kt2.index,data=kt2_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy()
                  
     # Calculation valid max and min
-    valminmax(nc,'longitude')
-    valminmax(nc,'latitude')
-    valminmax(nc,'air_pressure')
-    valminmax(nc,'air_temperature')
-    valminmax(nc,'relative_humidity')
-    valminmax(nc,'wind_speed')
-    valminmax(nc,'wind_from_direction')
-    valminmax(nc,'downwelling_longwave_flux_in_air')
-    valminmax(nc,'downwelling_shortwave_flux_in_air')
-    valminmax(nc,'downwelling_total_irradiance')
-    valminmax(nc,'upwelling_longwave_flux_in_air')
-    valminmax(nc,'upwelling_shortwave_flux_in_air')
-    valminmax(nc,'upwelling_total_irradiance')
-    valminmax(nc,'net_total_irradiance')
-    valminmax(nc,'ice_to_snow_heat_flux')
-    valminmax(nc,'snow_temperature')
-    valminmax(nc,'height_relative_to_snow_surface')
-    valminmax(nc,'skin_temperature_1')
-    valminmax(nc,'skin_temperature_2')
+    valminmax(nc,'longitude',np.ones(len(met_corrected['longitude'].to_numpy())))
+    valminmax(nc,'latitude',np.ones(len(met_corrected['latitude'].to_numpy())))
+    valminmax(nc,'air_pressure',qc_pressure)
+    valminmax(nc,'air_temperature',qc_flag_temperature)
+    valminmax(nc,'relative_humidity',qc_flag_relative_humidity)
+    valminmax(nc,'wind_speed',qc_flag_wind_speed)
+    valminmax(nc,'wind_from_direction',qc_flag_wind_from_direction)
+    valminmax(nc,'downwelling_longwave_flux_in_air',qc_flag_downwelling_radiation)
+    valminmax(nc,'downwelling_shortwave_flux_in_air',qc_flag_downwelling_radiation)
+    valminmax(nc,'downwelling_total_irradiance',qc_flag_downwelling_radiation)
+    valminmax(nc,'upwelling_longwave_flux_in_air',qc_flag_upwelling_radiation)
+    valminmax(nc,'upwelling_shortwave_flux_in_air',qc_flag_upwelling_radiation)
+    valminmax(nc,'upwelling_total_irradiance',qc_flag_upwelling_radiation)
+    valminmax(nc,'net_total_irradiance',qc_flag_downwelling_radiation)
+    valminmax(nc,'ice_to_snow_heat_flux',pd.DataFrame(index=ice_to_snow_heat_flux.index,data=qc_ice_to_snow_heat_flux).reindex(time_list,method='nearest',tolerance='1min').to_numpy())
+    valminmax(nc,'snow_temperature',)
+    valminmax(nc,'height_relative_to_snow_surface',np.ones(6))
+    valminmax(nc,'skin_temperature_1',pd.DataFrame(index=kt1.index,data=kt1_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy())
+    valminmax(nc,'skin_temperature_2',pd.DataFrame(index=kt2.index,data=kt2_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy())
 
     # Optional add a comment
     #base_str = 'Example string'
