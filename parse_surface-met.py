@@ -300,7 +300,7 @@ def main():
     nc.variables['qc_flag_downwelling_radiation'][:]=qc_flag_downwelling_radiation
     nc.variables['qc_flag_upwelling_radiation'][:]=qc_flag_upwelling_radiation
     nc.variables['qc_flag_ice_to_snow_heat_flux'][:]=pd.DataFrame(index=ice_to_snow_heat_flux.index,data=qc_ice_to_snow_heat_flux).reindex(time_list,method='nearest',tolerance='1min').to_numpy()
-    qc_snow = np.transpose(thermistor_string['qc'].reindex(time_list,method='nearest',tolerance='1min').to_numpy())[0]
+    qc_snow = np.transpose(thermistor_string['qc'].reindex(time_list,method='nearest',tolerance='1min').to_numpy())
     nc.variables['qc_flag_snow_temperature'][:]=qc_snow
     nc.variables['qc_flag_skin_temperature_2'][:]=pd.DataFrame(index=kt2.index,data=kt2_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy()
                  
@@ -319,11 +319,11 @@ def main():
     valminmax(nc,'upwelling_shortwave_flux_in_air',qc_flag_upwelling_radiation)
     valminmax(nc,'upwelling_total_irradiance',qc_flag_upwelling_radiation)
     valminmax(nc,'net_total_irradiance',qc_flag_downwelling_radiation)
-    valminmax(nc,'ice_to_snow_heat_flux',np.transpose(pd.DataFrame(index=ice_to_snow_heat_flux.index,data=qc_ice_to_snow_heat_flux).reindex(time_list,method='nearest',tolerance='1min').to_numpy())[0])
+    valminmax(nc,'ice_to_snow_heat_flux',np.transpose(pd.DataFrame(index=ice_to_snow_heat_flux.index,data=qc_ice_to_snow_heat_flux).reindex(time_list,method='nearest',tolerance='1min').to_numpy()))
     valminmax(nc,'snow_temperature',np.tile(qc_snow,(len(qc_snow),6)))
     valminmax(nc,'height_relative_to_snow_surface',np.ones(6))
-    valminmax(nc,'skin_temperature_1',np.transpose(pd.DataFrame(index=kt1.index,data=kt1_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy())[0])
-    valminmax(nc,'skin_temperature_2',np.transpose(pd.DataFrame(index=kt2.index,data=kt2_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy())[0])
+    valminmax(nc,'skin_temperature_1',np.transpose(pd.DataFrame(index=kt1.index,data=kt1_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy()))
+    valminmax(nc,'skin_temperature_2',np.transpose(pd.DataFrame(index=kt2.index,data=kt2_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy()))
 
     # Optional add a comment
     #base_str = 'Example string'
