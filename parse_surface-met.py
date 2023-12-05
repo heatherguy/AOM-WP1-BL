@@ -330,10 +330,10 @@ def main():
     nc.variables['snow_temperature'].valid_min=np.nanmin(thermistor_string.loc[thermistor_string['qc']==1].drop('qc',axis=1).to_numpy())
     nc.variables['snow_temperature'].valid_max=np.nanmax(thermistor_string.loc[thermistor_string['qc']==1].drop('qc',axis=1).to_numpy())
     valminmax(nc,'height_relative_to_snow_surface',np.ones(6))
-    nc.variables['skin_temperature_1'].valid_min=np.nanmin(kt_df.loc[kt_df['qc']==1].drop('qc',axis=1).to_numpy())
-    nc.variables['skin_temperature_1'].valid_max=np.nanmax(kt_df.loc[kt_df['qc']==1].drop('qc',axis=1).to_numpy())
-    nc.variables['skin_temperature_2'].valid_min=np.nanmin(kt_df.loc[kt_df['qc']==1].drop('qc',axis=1).to_numpy())
-    nc.variables['skin_temperature_2'].valid_max=np.nanmax(kt_df.loc[kt_df['qc']==1].drop('qc',axis=1).to_numpy())
+    nc.variables['skin_temperature_1'].valid_min=np.nanmin(kt_df.loc[kt_df['kt1_qc']==1,'kt1'].to_numpy())
+    nc.variables['skin_temperature_1'].valid_max=np.nanmax(kt_df.loc[kt_df['kt1_qc']==1,'kt1'].to_numpy())
+    nc.variables['skin_temperature_2'].valid_min=np.nanmin(kt_df.loc[kt_df['kt2_qc']==1,'kt2'].to_numpy())
+    nc.variables['skin_temperature_2'].valid_max=np.nanmax(kt_df.loc[kt_df['kt2_qc']==1,'kt2'].to_numpy())
 
     # Optional add a comment
     #base_str = 'Example string'
