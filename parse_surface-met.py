@@ -241,8 +241,13 @@ def main():
     kt1_fils.sort()
     kt2_fils.sort()
     kt1,kt1_amb,kt1_qc = get_kt15(kt1_fils,1)
-    kt2,kt2_amb,kt2_qc = get_kt15(kt2_fils,2)      
- 
+    kt2,kt2_amb,kt2_qc = get_kt15(kt2_fils,2)  
+
+    kt_df = pd.concat([kt1.reindex(time_list,method='nearest',tolerance='1min'),
+                      kt2.reindex(time_list,method='nearest',tolerance='1min'),
+                      kt1_qc.reindex(time_list,method='nearest',tolerance='1min'),
+                      kt2_qc.reindex(time_list,method='nearest',tolerance='1min')]) 
+    kt_df.columns=['kt1','kt2','kt1_qc','kt2_qc']
 
     # Set up netcdf files.
 
@@ -282,8 +287,8 @@ def main():
     nc.variables['upwelling_total_irradiance'][:]=upwelling_total_irradiance.to_numpy()
     nc.variables['net_total_irradiance'][:]=net_total_irradiance.to_numpy()
     nc.variables['ice_to_snow_heat_flux'][:]=ice_to_snow['flux'].to_numpy()
-    nc.variables['skin_temperature_1'][:]=kt1.reindex(time_list,method='nearest',tolerance='1min').to_numpy()
-    nc.variables['skin_temperature_2'][:]=kt2.reindex(time_list,method='nearest',tolerance='1min').to_numpy()
+    nc.variables['skin_temperature_1'][:]=kt_df['kt1'].to_numpy()
+    nc.variables['skin_temperature_2'][:]=kt_df['kt2'].to_numpy()
 
     nc.variables['snow_temperature'][:,0]=thermistor_string[-0.02].reindex(time_list,method='nearest',tolerance='1min').to_numpy()
     nc.variables['snow_temperature'][:,1]=thermistor_string[-0.04].reindex(time_list,method='nearest',tolerance='1min').to_numpy()
@@ -303,8 +308,8 @@ def main():
     nc.variables['qc_flag_ice_to_snow_heat_flux'][:]=ice_to_snow['qc'].to_numpy()
     qc_snow = np.transpose(thermistor_string['qc'].reindex(time_list,method='nearest',tolerance='1min').to_numpy())
     nc.variables['qc_flag_snow_temperature'][:]=qc_snow
-    nc.variables['qc_flag_skin_temperature_1'][:]=np.transpose(pd.DataFrame(index=kt1.index,data=kt1_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy())
-    nc.variables['qc_flag_skin_temperature_2'][:]=np.transpose(pd.DataFrame(index=kt2.index,data=kt2_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy())
+    nc.variables['qc_flag_skin_temperature_1'][:]=kt_df['kt1_qc'].to_numpy()
+    nc.variables['qc_flag_skin_temperature_2'][:]=kt_df['kt2_qc'].to_numpy()
                  
     # Calculation valid max and min
     valminmax(nc,'longitude',np.ones(len(met_corrected['longitude'].to_numpy())))
@@ -325,8 +330,10 @@ def main():
     nc.variables['snow_temperature'].valid_min=np.nanmin(thermistor_string.loc[thermistor_string['qc']==1].drop('qc',axis=1).to_numpy())
     nc.variables['snow_temperature'].valid_max=np.nanmax(thermistor_string.loc[thermistor_string['qc']==1].drop('qc',axis=1).to_numpy())
     valminmax(nc,'height_relative_to_snow_surface',np.ones(6))
-    valminmax(nc,'skin_temperature_1',flatten(np.transpose(pd.DataFrame(index=kt1.index,data=kt1_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy())))
-    valminmax(nc,'skin_temperature_2',flatten(np.transpose(pd.DataFrame(index=kt2.index,data=kt2_qc).reindex(time_list,method='nearest',tolerance='1min').to_numpy())))
+    nc.variables['skin_temperature_1'].valid_min=np.nanmin(kt_df.loc[kt_df['qc']==1].drop('qc',axis=1).to_numpy())
+    nc.variables['skin_temperature_1'].valid_max=np.nanmax(kt_df.loc[kt_df['qc']==1].drop('qc',axis=1).to_numpy())
+    nc.variables['skin_temperature_2'].valid_min=np.nanmin(kt_df.loc[kt_df['qc']==1].drop('qc',axis=1).to_numpy())
+    nc.variables['skin_temperature_2'].valid_max=np.nanmax(kt_df.loc[kt_df['qc']==1].drop('qc',axis=1).to_numpy())
 
     # Optional add a comment
     #base_str = 'Example string'
