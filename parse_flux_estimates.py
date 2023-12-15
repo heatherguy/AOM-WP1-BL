@@ -149,12 +149,9 @@ def main():
         gps_fils = glob.glob(in_loc+'raw/%s*.GPS'%dt.datetime.strftime(day.date(),'%y%m%d'))
         gps_fils.sort()
         gps,met_latlon = get_gps(gps_fils)
-        # Apply correction for step change 
-        met_corrected=correct_gps(met_latlon,['longitude','latitude'])
 
-        gps = pd.concat(all_pdfs)
-        gps_lats = met_corrected['latitude']
-        gps_lons = met_corrected['longitude']
+        gps_lats = met_latlon['latitude']
+        gps_lons = met_latlon['longitude']
   
         # Set up netcdf files.
     
