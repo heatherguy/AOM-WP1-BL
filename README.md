@@ -11,7 +11,6 @@ Quality controlled, 1-minute averages of air temperature, relative humidity, win
 - True wind directions are calculated using the heading between the two GPS units on the Met Mast and the radiometer stand. 
 - Vector wind averages are calculated before derving the True wind direction in degrees.
 - No tilt correction is applied to the 3D sonic anemometer data. Horizontal wind speed is calculated from all 3D componenets, assuming that the contribution of vertical velocity is negligible.  
-- The latitude and longitude data from the GPS units experienced several unexplained and unrealistic step changes. A 'best guess' correction has been applied to remove these step changes based on information from the Ship GPS data, however the latitude and longitude in this file should be considered to have an uncertainty of +/- 0.4 degrees. This impacted both GPS units and therefore did not impact the True wind direction calculation. 
 - Air pressure in this file is derived from the internal sensor in the Licor control box, no corrections have been applied. 
 - The Met mast KT15 (skin_temperature_1) had an window heater activated. The radiometer stand KT15 (skin_temperature_2) did not.
 - The field log-book for both ice stations is attached: ARTofMELT23_icestation_logbook.xls
