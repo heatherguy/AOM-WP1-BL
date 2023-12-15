@@ -151,7 +151,7 @@ def main():
         # to the radiometer stand. 
         # GPS ellipsoid is WGS84
         # units are degrees and m
-        fwd_azimuth,distance = get_sonic_direction(datetime,met_corrected,rad_corrected)
+        fwd_azimuth,distance = get_sonic_direction(datetime,met_latlon,rad_latlon)
 
         # flag as bad if horizontal distance > 100 m 
         if distance < 100 : 
