@@ -99,6 +99,8 @@ def main():
     gps_fils2 = glob.glob(in_loc+'raw/*.gps')
     gps1,met_latlon = get_gps(glob.glob(in_loc+'raw/*.GPS'))
     gps2,rad_latlon = get_gps(glob.glob(in_loc+'raw/*.gps'))
+    met_latlon = met_latlon.reindex(time_list,method='nearest',tolerance='1min')
+    rad_latlon = rad_latlon.reindex(time_list,method='nearest',tolerance='1min')
 
     # Get air pressure (from licor)
 
