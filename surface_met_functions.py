@@ -17,10 +17,17 @@ from netCDF4 import Dataset, date2num
 import glob
 import pyproj
 
+def dms2dd(degrees, minutes, seconds, direction):
+    # Converts degrees minutes to decimal degrees
+    dd = float(degrees) + float(minutes)/60 + float(seconds)/(60*60);
+    if direction == 'S' or direction == 'W':
+        dd *= -1
+    return dd
+
 def get_gps(infils):
     # Extract GPS data from files and apply basic qc. 
-    
     infils.sort()
+    
     header=[0,
             'week',
             'seconds',
@@ -39,35 +46,46 @@ def get_gps(infils):
     
     all_pdfs=[]
     for fil in infils:
-        all_pdfs.append(pd.read_csv(fil,delim_whitespace=True,parse_dates=[[0,1,2,3,4,5]],index_col=0, date_format='%Y %m %d %H %M %S.%f',header=None))
+        all_pdfs.append(pd.read_csv(fil,delim_whitespace=True,parse_dates=[[0,1,2,3,4,5]],index_col=0, date_format='%Y %m %d %H %M %S.%f',header=None,dtype='str'))
     
     gps = pd.concat(all_pdfs)
     gps.columns=header
-    
     # basic qc
     gps['qc']=np.ones(len(gps))
     # must have a fix
-    gps.loc[gps['fix_type']==0,'qc']=2    
+    gps['fix_type'] = pd.to_numeric(gps['fix_type'],errors='coerce')
+    gps.loc[gps['fix_type']==0,'qc']=2
+    gps.loc[np.isnan(gps['fix_type'].to_numpy()),'qc']=2
     
     # convert lat/lon
-    lats = pd.to_numeric(gps['latitude'],errors='coerce')/100
-    lats.loc[gps['lat_hem']!='N'] = -lats.loc[gps['lat_hem']!='N']
-    lons = pd.to_numeric(gps['longitude'],errors='coerce')/100
-    lons.loc[gps['lon_hem']!='E'] = -lons.loc[gps['lon_hem']!='E']
+    lats=np.empty(len(gps))*np.nan
+    lons = np.empty(len(gps))*np.nan
+    for i in range(0,len(gps)):
+        # ddmm.mmmm
+        try:
+            dlat=int(gps['latitude'].iloc[i][0:2])
+            mlat=float(gps['latitude'].iloc[i][2:]) 
+            lats[i]=dms2dd(dlat,mlat,0,gps['lat_hem'].iloc[i])
+        except:
+            lats[i]=np.nan
+            continue
+        
+        # dddmm.mmmm
+        try:
+            dlon=int(gps['longitude'].iloc[i][0:3])
+            mlon=float(gps['longitude'].iloc[i][3:]) 
+            lons[i]=dms2dd(dlon,mlon,0,gps['lon_hem'].iloc[i])
+        except:
+            lons[i]=np.nan
+            continue
     
-    latlon=pd.concat([lats,lons],axis=1)
+    latlon=pd.DataFrame(index=gps.index,data={'latitude':lats,'longitude':lons})
     latlon['qc']=gps['qc']
     
     # Sanity check Latitude > 40, Longitude < 90
     latlon.loc[latlon['latitude']<40,'qc']=3
     latlon.loc[latlon['longitude']>90,'qc']=3
 
-    # qc big jumps
-    latlon.loc[latlon['longitude'].diff()>0.1,'qc']=4
-    latlon.loc[latlon['latitude'].diff()>0.1,'qc']=4
-
-    gps['qc'] = latlon['qc']
-    
     # 1 min mean, ignoring bad qc
     latlon.loc[latlon['qc']!=1,['latitude','longitude']]=np.nan
     latlon=latlon.resample('1min').mean()
@@ -353,53 +371,3 @@ def get_kt15(fils,qcf):
         skin_qc.loc[dt.datetime(2023,6,2,10,30):dt.datetime(2023,6,2,10,35)]=2
 
     return skin,amb,skin_qc
-
-def correct_gps(original, coords):
-    # Function to correct for step changes in GPS data
-    # There are a few unrealistic step changes in either 
-    # longitude or latitude measured by the GPS. 
-    # All the step changes are ~0.4 degrees magnitude and
-    # apply to both GPS units simultaneously (i.e. they do not 
-    # impact the wind direction calculation. 
-    # I've hacked together this function to correct for the 
-    # step changes using the logic of bringing the overall GPS
-    # track as close as possible to the ship GPS, and assuming
-    # that the step changes are the problem (rather than a gradual drift).
-    # I don't completely trust this correction and the accuracy in 
-    # the latitude and longitude values from these GPS units should
-    # be considered +/- 0.4 degrees until we get to the bottom
-    # of this. 
-    
-    corrected = original.copy()
-   
-    for coord in coords: 
-        # flag jumps
-        corrected.loc[corrected[coord].diff()>0.1,'qc']=5    
-        # get jump times
-        jump_times = corrected.loc[np.abs(corrected[coord].diff())>0.1].index
-    
-        #initialise
-        jt=dt.datetime(2023,5,16)   
-        for time in jump_times: 
-            if time-jt < dt.timedelta(minutes=5):
-                # We already corrected this jump
-                jt=time
-                continue
-        
-            diff = original.loc[time-dt.timedelta(minutes=5),coord] - original.loc[time+dt.timedelta(minutes=5),coord]
-            print('Step change found at: %s'%time)
-            print('GPS difference: %s'%diff)
-        
-            if (time < dt.datetime(2023,5,18,13,45)) or ((time > dt.datetime(2023,5,29))&(time < dt.datetime(2023,5,31))):
-                corrected.loc[:time,coord] = corrected.loc[:time,coord]-diff
-            else:
-                corrected.loc[time:,coord] = corrected.loc[time:,coord]+diff
-        
-            jt=time
-
-        # clean up any edge spikes
-        bad_indices=corrected[corrected[coord].diff()>0.03].index.to_numpy()
-        for ind in bad_indices: 
-            corrected.loc[pd.to_datetime(ind)-dt.timedelta(minutes=2):pd.to_datetime(ind)+dt.timedelta(minutes=2),coord]=np.nan
-    
-    return corrected
