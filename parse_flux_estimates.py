@@ -17,7 +17,7 @@ import sys
 
 from NC_functions_v1 import *
 from flux_functions import *
-from surface_met_functions import get_gps, correct_gps
+from surface_met_functions import get_gps
 from netCDF4 import Dataset, date2num
 import glob
 
