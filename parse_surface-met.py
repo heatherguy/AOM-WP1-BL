@@ -259,13 +259,13 @@ def main():
 
     NC_Global_Attributes(nc, meta, start,stop - pd.Timedelta(minutes=1))
     NC_Dimensions(nc, len(time_list), index=6)  
-    NC_CommonVariables(nc, time_list,met_corrected['latitude'].to_numpy(),met_corrected['longitude'].to_numpy(), np)
+    NC_CommonVariables(nc, time_list,met_latlon['latitude'].to_numpy(),met_latlon['longitude'].to_numpy(), np)
     NC_SpecificVariables(nc, var, np)
 
     # Set geospatial bounds
     # top left corner, bottom right corner presented as : 
     # latitude longitude, latitude longitude (signed decimal)
-    bbox='%sN %sE, %sN %sE'%(np.nanmax(met_corrected['latitude'].to_numpy()),np.nanmin(met_corrected['longitude'].to_numpy()),np.nanmin(met_corrected['latitude'].to_numpy()),np.nanmax(met_corrected['longitude'].to_numpy()))
+    bbox='%sN %sE, %sN %sE'%(np.nanmax(met_latlon['latitude'].to_numpy()),np.nanmin(met_latlon['longitude'].to_numpy()),np.nanmin(met_latlon['latitude'].to_numpy()),np.nanmax(met_latlon['longitude'].to_numpy()))
     nc.setncattr('geospatial_bounds', bbox)
     
     # Write in data
@@ -308,8 +308,8 @@ def main():
     nc.variables['qc_flag_skin_temperature_2'][:]=kt_df['kt2_qc'].to_numpy()
                  
     # Calculation valid max and min
-    valminmax(nc,'longitude',np.ones(len(met_corrected['longitude'].to_numpy())))
-    valminmax(nc,'latitude',np.ones(len(met_corrected['latitude'].to_numpy())))
+    valminmax(nc,'longitude',np.ones(len(met_latlon['longitude'].to_numpy())))
+    valminmax(nc,'latitude',np.ones(len(met_latlon['latitude'].to_numpy())))
     valminmax(nc,'air_pressure',qc_pressure)
     valminmax(nc,'air_temperature',qc_flag_temperature)
     valminmax(nc,'relative_humidity',qc_flag_relative_humidity)
