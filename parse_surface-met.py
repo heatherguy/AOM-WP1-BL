@@ -131,7 +131,7 @@ def main():
     # Get 3D sonic data
     # Processed 3D sonic data should already be corrected to a 
     # right-handed coordinate sytesm
-    # +ve z is upwards, +ve x is 'northwards', +ve y is 'eastward'
+    # +ve z is upwards, +ve x is 'northwards', +ve y is 'westward'
 
     print('Extracting metek and calculating winds...')
     metekfils = glob.glob(in_loc+'metek_processed/metek_*')
@@ -174,7 +174,8 @@ def main():
 
         # Calculate wind direction from u,v
         # remember we want wind 'from' direction (function accounts for this)
-        wdir_relative = get_windd(rot[0],rot[1])
+        # Remember +ve y is westward (-ve u) and +ve x is northward (v)
+        wdir_relative = get_windd(-rot[1],rot[0])
         m_vector.loc[datetime,'wind_from_direction']=wdir_relative
 
     # Wind qc flags
