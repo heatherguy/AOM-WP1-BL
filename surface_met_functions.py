@@ -199,8 +199,8 @@ def get_windd(uwind,vwind):
     meteorological degrees = clockwise, north =0, direction wind is coming from.
     
     Parameters:
-        uwind: wind in u direction (north)
-        vwind: wind in v direction (east)
+        uwind: wind in u direction (east)
+        vwind: wind in v direction (north)
         
     Returns:
         dir: Direction wind is comping from in degrees
