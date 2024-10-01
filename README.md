@@ -72,3 +72,9 @@ flux-components:
     stop='202306120000'
     avp=30 # Averaging period for eddy covariance flux calculation (minutes)
     python parse_flux_estimates.py $in_loc $out_loc $start $start $avp
+
+### 2. Cloud radar data
+
+- Raw data from the Radiometer Physics RPG-FMCW-94-SP/DP 94 GHz W-band Cloud Doppler Radar are initally converted into netcdf files using the the cloudnetpy function cloudnetpy.instruments.rpg2nc (cloudnetpy version 1.46.4, https://github.com/actris-cloudnet/cloudnetpy). 
+- Artifacts in the radar data are removed by visual inspection based on the file 'qc-files/aom_radar_artifacts.txt'. Locations where artifacts have been removed are flagged.
+- The script process_radar.py flags and removes the artifacts, and adds additional metadata. 
