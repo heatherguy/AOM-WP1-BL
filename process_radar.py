@@ -109,7 +109,7 @@ def main():
         radar.attrs['date_created'] = dt.datetime.strftime(dt.datetime.now(),'%d %b %Y %H:%M')
         radar.attrs['institution']="Stockholm University and the University of Leeds"
         radar.attrs['processing_software'] = "cloudnetpy version 1.46.4"
-        radar.attrs['sampling_interval'] = "native 5 to 30s depending on chirp sequence"
+        radar.attrs['sampling_interval'] = "5 s"
         radar.attrs['product_version'] = "v01"
         radar.attrs['project'] = "ARTofMELT"
         radar.attrs['project_principal_investigator'] = "Michael Tjernström"
