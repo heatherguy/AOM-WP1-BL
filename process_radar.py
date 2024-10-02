@@ -103,7 +103,7 @@ def main():
 
         # Make sure the height is correct assuming a height amsl of 20m on the 4th deck
         radar.altitude.data=np.array(20.)
-        radar.height.data = radar.range.data + list(set(radar.altitude.data))[0]
+        radar.height.data = radar.range.data + 20.0
         
         radar.attrs['location_keywords'] = "Oden, Arctic Ocean, Fram Strait, atmosphere, profile, on the ship"
         radar.attrs['date_created'] = dt.datetime.strftime(dt.datetime.now(),'%d %b %Y %H:%M')
