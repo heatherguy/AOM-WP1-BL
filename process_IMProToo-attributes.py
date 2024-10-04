@@ -5,22 +5,16 @@ Created on Wed May 10 2023
 
 @author: heather
 
-Process MRR raw spectra with IMProToo
-Generate netcdf file
+Update attributes in IMProToo output file
 
 Inputs: 
-    in_dir: Raw spectra directory
-    in_dat: Date of raw input file, format 'MMDD'
+    in_dir: IMProToo directory
+    in_dat: Date 'MMDD'
     out_dir: Output location
 
-Example usage: 
-   cd /Users/heather/IMProToo/
-   source venv/bin/activate
-   python MRR_process.py $in_dir $in_dat $out_dir >> /Users/heather/IMProToo/output/logs/${in_dat}_log.txt 2>&1
 """
 
 import sys,os
-import IMProToo
 import matplotlib.pyplot as plt
 import xarray as xr
 import datetime as dt
@@ -47,34 +41,20 @@ def main():
     in_dat=sys.argv[2]
     out_dir=sys.argv[3]
     
-    print('Loading data...')
-    rawData = IMProToo.mrrRawData(str(in_dir)+str(in_dat) + '.raw')
-    processedSpec = IMProToo.MrrZe(rawData)
-    
-    processedSpec.co["ncCreator"] = "Heather Guy, University of Leeds, heather.guy@ncas.ac.uk"
-    processedSpec.co["ncDescription"] = 'Micro rain radar data processed with IMProToo from expedition ARTofMELT, Arctic Ocean, 2023'
-    processedSpec.co["ncInstitution"] = "University of Leeds and the National Centre for Atmospheric Science"
-    processedSpec.co["ncLocation"] = "Ice breaker Oden foredeck, during the ARTofMELT field campaign. 78.13 to 80.52 degrees N, -3.87 to 14.14 degrees E."
-
-    processedSpec.co["dealiaseSpectrum"] = True
-    processedSpec.rawToSnow()
-    
-    print('Writing data...')
-    # Write processed netcdf file
     YYYYMMDD='2023%s'%(in_dat)
-    processedSpec.writeNetCDF(out_dir+'ncas-mrr-1_ARTofMELT_%s_IMProToo_v0.nc'%(YYYYMMDD),ncForm="NETCDF3_CLASSIC")
-
-    # Modify netcdf attributes and resave
-    print('Updating attributes..')
     radar = xr.open_dataset(out_dir+'ncas-mrr-1_ARTofMELT_%s_IMProToo_v0.nc'%(YYYYMMDD))
 
     # Add latitude and longitude (lets pull them from the radar files?)
-    RPG_radar = xr.open_dataset('/Users/heather/Desktop/ARTofMELT/data/radar/'+'RPGFMCW94_ARTofMELT_%s_radar_v1.nc'%(YYYYMMDD[2:]))
-    radar['latitude'] = RPG_radar.latitude
-    radar['latitude'] = RPG_radar.longitude   
-
+    try: 
+        RPG_radar = xr.open_dataset('/Users/heather/Desktop/ARTofMELT/data/radar/'+'RPGFMCW94_ARTofMELT_%s_radar_v1.nc'%(YYYYMMDD[2:]))
+        radar['latitude'] = RPG_radar.latitude
+        radar['longitude'] = RPG_radar.longitude  
+    except:
+        print('Cant find radar file to update latitude and longitude')
+        return
+        
     # Add altitude 
-    radar = radar.assign(altitude =np.array(20.))
+    radar = radar.assign(altitude =np.array(10.))
     radar['altitude'].attrs = {'units':"m",'long_name':"Altitude of MRR above mean sea level",'standard_name':"altitude"}
 
     # add meta data
@@ -101,8 +81,8 @@ def main():
     radar.attrs['project_principal_investigator_url'] = "https://orcid.org/0000-0002-6908-7410"
     radar.attrs['Conventions'] =	'CF-1.8'
     radar.attrs['year']=str(2023)
-    radar.attrs['month']=str(pd.to_datetime(mrr.time[0].data).month).zfill(2)
-    radar.attrs['day']=str(pd.to_datetime(mrr.time[0].data).day).zfill(2)
+    radar.attrs['month']=str(pd.to_datetime(radar.time[0].data).month).zfill(2)
+    radar.attrs['day']=str(pd.to_datetime(radar.time[0].data).day).zfill(2)
     
     # add decimal doy
     radar = radar.assign(day_of_year = (['time'],[decimaldayofyear(t) for t in radar.time.data], {'units':"1",'long_name':"Day of Year",'description':"time as decimal day of year"}))
@@ -111,11 +91,14 @@ def main():
     del radar.attrs['contact_person']
     del radar.attrs['author']
     # rename 'properties' to 'algorithm_settings'
-    radar.attrs['IMProToo_settings'] = mrr.attrs.pop('properties')
+    radar.attrs['IMProToo_settings'] = radar.attrs.pop('properties')
     radar.attrs['source'] = "NCAS AMOF METEK MRR2 Micro Rain Radar (ncas-mrr-1)"
 
+    # Edit quality description
+    radar['quality'].attrs = {'units':"bin",'long_name':"Quality control flag (binary), indicating the status of the IMProToo algoirthm.",'description':"Quality flag consists of 18-bits, flag 1 is the least significant. Flags 1-5 can usually be ignored. Flags 8-12 indicate reasons why a spectrum does not contain a peak. Flags 16-18 are serious errors, do not use these data. See flag_meanings for the definition of each bit.",'flag_meanings':'1: spectrum interpolated around 0 and 12 m s^-1 \n2: peak streches over interpolated part  \n3: peak is dealiased  \n4: first Algorithm to determine peak failed, used backup  \n5: dealiasing went wrong, but is corrected  \n6: Not used \n7: Not used \n8: spectrum was incompletely recorded  \n9: the variance test indicated no peak  \n10: spectrum is not processed due to according setting  \n11: peak removed since not wide enough  \n12: peak removed, because too few neighbours show signal, too  \n13: Not used \n14: Not used \n15: Not used \n16: peak is at the very border to bad data  \n17: in this area there are still strong velocity jumps, indicates failed dealiasing  \n18: during dealiasing, a warning was triggered, applied to whole columm \n'}
+
     # Save
-    print('Saving masked netcdf..')
+    print('Saving netcdf v1..')
     radar.to_netcdf(out_dir+'ncas-mrr-1_ARTofMELT_%s_IMProToo_v1.nc'%(YYYYMMDD))
 
 if __name__ == '__main__':
