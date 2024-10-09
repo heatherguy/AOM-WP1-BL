@@ -8,6 +8,20 @@ Created on Thurs March 12 17:22:21 2020
 Functions to generate netCDF files. 
 
 """
+import pandas as pd
+
+def decimaldayofyear(date):
+    '''
+    this function returns the decimal day of year.
+    Input is a date in datetime64 format, changed into datetime object here.
+    The minimum time is microseconds.
+    eg. date = numpy.datetime64('2023-05-09T11:33:02.639000000'), output: 129.481385 (with 6 digit precision),
+    output given in fractional day of year, with respect to 2023 (1 Jan 2023 = day 1)
+    '''
+    seconds_in_a_day=24*60*60
+    total_seconds = (pd.Timestamp(date).hour*60*60) + (pd.Timestamp(date).minute*60) + pd.Timestamp(date).second + pd.Timestamp(date).microsecond*10**(-6)
+    fractional_day_of_year =np.round(pd.Timestamp(date).dayofyear + total_seconds/seconds_in_a_day,6)
+    return fractional_day_of_year
 
 def NC_SpecificVariables(fn_nc, var, np):
     """
@@ -151,15 +165,16 @@ def NC_CommonVariables(fn_nc, time_list,lat_list,lon_list, np):
    
     #doy
     doys = fn_nc.createVariable('day_of_year', np.float32, ('time',))
-    all_doys = np.float32(np.asarray([time_list[i].timetuple().tm_yday for i in range(0,len(time_list))]))
+    all_doys = np.float32(np.asarray([decimaldayofyear(time_list[i]) for i in range(0,len(time_list))]))
     #variable attributes
     doys.type = 'float32'
     doys.units = '1'
     doys.long_name = 'Day of Year'
+    doys.description = "time as decimal day of year"
     doys.valid_min = np.float32(min(all_doys))
     doys.valid_max = np.float32(max(all_doys))
     #write data
-    doys[:] = np.float32(np.asarray([time_list[i].timetuple().tm_yday for i in range(0,len(time_list))]))
+    doys[:] = np.float32(np.asarray([decimaldayofyear(time_list[i]) for i in range(0,len(time_list))]))
     
     lats = fn_nc.createVariable('latitude', np.float32, ('time',))
     #variable attributes

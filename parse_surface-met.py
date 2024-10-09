@@ -338,6 +338,14 @@ def main():
     #base_str = 'Example string'
     #nc.setncattr('comment', base_str)
 
+    nc.setncattr('platform_altitude','2 m a.s.l')
+    nc.setncattr('location_keywords',"Arctic Ocean, Fram Strait, atmosphere, sea-ice, meteorology")
+    nc.setncattr('date_created',dt.datetime.strftime(dt.datetime.now(),'%d %b %Y %H:%M'))
+    nc.setncattr('project_principal_investigator',"Michael Tjernström")
+    nc.setncattr('project_principal_investigator_email',"michaelt@misu.su.se")
+    nc.setncattr('project_principal_investigator_url',"https://orcid.org/0000-0002-6908-7410")
+
+
     # Close netcdf file
     nc.close()
     
