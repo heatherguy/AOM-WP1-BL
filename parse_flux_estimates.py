@@ -146,7 +146,7 @@ def main():
         HMP = pd.concat(all_pdfs)
 
         # Get GPS data
-        gps_fils = glob.glob(in_loc+'raw/%s*.GPS'%dt.datetime.strftime(day.date(),'%y%m%d'))
+        gps_fils = glob.glob(in_loc+'raw/%s*.GPS_met'%dt.datetime.strftime(day.date(),'%y%m%d'))
         gps_fils.sort()
         gps,met_latlon = get_gps(gps_fils)
 
@@ -666,6 +666,20 @@ def main():
             valminmax(nc_est,'momentum_flux_u', np.float32(- rho * wprimeuprimebar)) 
             nc_est.variables['momentum_flux_v'][i]  = np.float32(- rho * wprimevprimebar)
             valminmax(nc_est,'momentum_flux_v', np.float32(- rho * wprimevprimebar)) 
+        
+        # Add some additional attributes
+        nc_est.setncattr('platform_altitude','2 m a.s.l')
+        nc_est.setncattr('location_keywords',"Arctic Ocean, Fram Strait, atmosphere, sea-ice, meteorology")
+        nc_est.setncattr('date_created',dt.datetime.strftime(dt.datetime.now(),'%d %b %Y %H:%M'))
+        nc_est.setncattr('project_principal_investigator',"Michael Tjernström")
+        nc_est.setncattr('project_principal_investigator_email',"michaelt@misu.su.se")
+        nc_est.setncattr('project_principal_investigator_url',"https://orcid.org/0000-0002-6908-7410")
+        nc_comp.setncattr('platform_altitude','2 m a.s.l')
+        nc_comp.setncattr('location_keywords',"Arctic Ocean, Fram Strait, atmosphere, sea-ice, meteorology")
+        nc_comp.setncattr('date_created',dt.datetime.strftime(dt.datetime.now(),'%d %b %Y %H:%M'))
+        nc_comp.setncattr('project_principal_investigator',"Michael Tjernström")
+        nc_comp.setncattr('project_principal_investigator_email',"michaelt@misu.su.se")
+        nc_comp.setncattr('project_principal_investigator_url',"https://orcid.org/0000-0002-6908-7410")
         
         # Close netcdf files
         
