@@ -95,10 +95,10 @@ def main():
     # Get GPS data
 
     print('Extracting GPS data...')
-    gps_fils1 = glob.glob(in_loc+'raw/*.GPS')
-    gps_fils2 = glob.glob(in_loc+'raw/*.gps')
-    gps1,met_latlon = get_gps(glob.glob(in_loc+'raw/*.GPS'))
-    gps2,rad_latlon = get_gps(glob.glob(in_loc+'raw/*.gps'))
+    gps_fils1 = glob.glob(in_loc+'raw/*.GPS_met')
+    gps_fils2 = glob.glob(in_loc+'raw/*.gps_rad')
+    gps1,met_latlon = get_gps(glob.glob(in_loc+'raw/*.GPS_met'))
+    gps2,rad_latlon = get_gps(glob.glob(in_loc+'raw/*.gps_rad'))
     met_latlon = met_latlon.reindex(time_list,method='nearest',tolerance='1min')
     rad_latlon = rad_latlon.reindex(time_list,method='nearest',tolerance='1min')
 
