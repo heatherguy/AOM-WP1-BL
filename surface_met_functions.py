@@ -47,7 +47,12 @@ def get_gps(infils):
     
     all_pdfs=[]
     for fil in infils:
-        all_pdfs.append(pd.read_csv(fil,delim_whitespace=True,parse_dates=[[0,1,2,3,4,5]],index_col=0, date_format='%Y %m %d %H %M %S.%f',header=None,dtype='str'))
+        temp = pd.read_csv(fil,sep=r'\s+|,',header=None,dtype='str',engine='python')
+        temp=temp.rename({0:'year',1:'month',2:'day',3:'hour',4:'minute',5:'second'},axis=1)
+        temp_dates = pd.to_datetime(temp[['year','month','day','hour','minute','second']])
+        temp.index=temp_dates
+        del temp['year'],temp['month'],temp['day'],temp['hour'],temp['minute'],temp['second']
+        all_pdfs.append(temp)
     
     gps = pd.concat(all_pdfs)
     gps.columns=header
