@@ -6,7 +6,7 @@
 #SBATCH --mem=10000
 
 # Check we're in the right directory
-cd /gws/nopw/j04/ncas_radar_vol1/heather/AoM2023/AOM-WP1-BL/
+cd /gws/nopw/j04/ncas_radar_vol1/heather/AOM2023/AOM-WP1-BL/
 
 # activate python environment
 source ~/miniconda3_b/bin/activate
@@ -19,12 +19,12 @@ in_loc='/gws/nopw/j04/ncas_radar_vol1/heather/AOM2023/ice-station-data/'
 # Ice station 1
 start_dat='202305160000'
 stop_dat='202305220000'
-python parse_surface-met.py $in_loc $netcdf_out $start_dat $stop_dat
+#python parse_surface-met.py $in_loc $netcdf_out $start_dat $stop_dat
 
 # Ice station 1
 start_dat='202305290000'
 stop_dat='202306120000'
-python parse_surface-met.py $in_loc $netcdf_out $start_dat $stop_dat
+#python parse_surface-met.py $in_loc $netcdf_out $start_dat $stop_dat
 
 start_dat='202305160000'
 stop_dat='202306120000'
