@@ -498,6 +498,10 @@ def main():
             valminmax(nc_comp,'wprimevprimebar',np.float32(wprimevprimebar) ) 
         
             # Skew
+
+            skew_q = skew(m['q'])
+            nc_comp.variables['skew_specific_humidity'][i] = np.float32(skew_q)
+            valminmax(nc_comp,'skew_specific_humidity', np.float32(skew_q)) 
         
             skew_ts = skew(m['T'])
             nc_comp.variables['skew_sonic_air_temperature'][i] = np.float32(skew_ts)
@@ -516,6 +520,9 @@ def main():
             valminmax(nc_comp,'skew_upward_air_velocity',np.float32(skew_u) ) 
             
             # Kurtosis
+            kurtosis_q = kurtosis(m['q'])
+            nc_comp.variables['kurtosis_specific_humidity'][i] = np.float32(kurtosis_q) 
+            valminmax(nc_comp,'kurtosis_specific_humidity',np.float32(kurtosis_q) )
         
             kurtosis_ts = kurtosis(m['T'])
             nc_comp.variables['kurtosis_sonic_air_temperature'][i] = np.float32(kurtosis_ts) 
@@ -534,6 +541,15 @@ def main():
             valminmax(nc_comp,'kurtosis_upward_air_velocity',np.float32(kurtosis_u)) 
         
             # Stationarity testing
+            try: 
+                sst_wq,Cwq, rol_cov_wq = stationarity(m['w'],m['q'])
+            except:
+                sst_wq = np.nan
+
+            nc_comp.variables['sst_wq'][i] = np.float32(sst_wq)
+            valminmax(nc_comp,'sst_wq',np.float32(sst_wq)) 
+
+            
             try: 
                 sst_wts,Cwt, rol_cov_wt = stationarity(m['w'],m['T'])
             except:
@@ -585,6 +601,8 @@ def main():
             
             # QC flags
             #qc_flag_itc_class
+            nc_comp.variables['qc_flag_kurtosis_q'][i] = kurt_flag(kurtosis_q)
+            nc_est.variables['qc_flag_kurtosis_q'][i] = kurt_flag(kurtosis_q)
             
             nc_comp.variables['qc_flag_kurtosis_ts'][i] = kurt_flag(kurtosis_ts)
             nc_est.variables['qc_flag_kurtosis_ts'][i] = kurt_flag(kurtosis_ts)
@@ -606,6 +624,12 @@ def main():
             
             nc_comp.variables['qc_flag_quality_wv'][i] = flux_devel_test(itc_w, sst_wv)
             nc_est.variables['qc_flag_quality_wv'][i] = flux_devel_test(itc_w, sst_wv)
+
+            nc_comp.variables['qc_flag_quality_wq'][i] = flux_devel_test(itc_w, sst_wq)
+            nc_est.variables['qc_flag_quality_wq'][i] = flux_devel_test(itc_w, sst_wq)
+            
+            nc_comp.variables['qc_flag_skew_q'][i] = skew_flag(skew_q)
+            nc_est.variables['qc_flag_skew_q'][i] = skew_flag(skew_q)
             
             nc_comp.variables['qc_flag_skew_ts'][i] = skew_flag(skew_ts)
             nc_est.variables['qc_flag_skew_ts'][i] = skew_flag(skew_ts)
