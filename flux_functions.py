@@ -395,7 +395,7 @@ def flux_devel_test(itc_w,sst):
     """    
     # Check for nan's
     if np.isnan(sst) or np.isnan(itc_w):
-        QC = np.nan
+        QC = 0
     elif itc_w < 0 or sst < 0:
         QC = 0
     elif itc_w <=75 and sst <=30:
