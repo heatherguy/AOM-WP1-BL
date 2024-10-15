@@ -121,7 +121,19 @@ def main():
 
         # add decimal doy
         radar = radar.assign(day_of_year = (['time'],[decimaldayofyear(t) for t in radar.time.data], {'units':"1",'long_name':"Day of Year",'description':"time as decimal day of year"}))
-    
+
+        # Update latitude and longitude using ship data
+        # Get ship data
+        ship_path='/Users/heather/Desktop/ARTofMELT/data/shipdata/'
+        fils = glob.glob(ship_path+'*.csv')
+        fils.sort()
+        ship_data = pd.concat([pd.read_csv(fil,parse_dates=[0],index_col=0) for fil in fils])
+        lats = ship_data[' Oden.Ship.LatitudeDegreesFixed'].reindex(radar.time,method='nearest',tolerance='5s')
+        lons = ship_data[' Oden.Ship.LongitudeDegreesFixed'].reindex(radar.time,method='nearest',tolerance='5s')
+        radar = radar.assign(latitude = (['time'],lats.to_numpy(), {'units':"degree_north",'long_name':"Latitude of site",'standard_name':"latitude"}))
+        radar = radar.assign(longitude = (['time'],lons.to_numpy(), {'units':"degree_east",'long_name':"Longitude of site",'standard_name':"longitude"}))
+
+        
         if len(artifacts_subset)>0:
             print('Masking radar artifacts...')
             for j in range(0,len(artifacts_subset)):
