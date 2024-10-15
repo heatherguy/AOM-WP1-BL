@@ -57,6 +57,17 @@ def main():
     radar = radar.assign(altitude =np.array(10.))
     radar['altitude'].attrs = {'units':"m",'long_name':"Altitude of MRR above mean sea level",'standard_name':"altitude"}
 
+    # Add latitude and longitude from ship data
+    # Get ship data
+    ship_path='/Users/heather/Desktop/ARTofMELT/data/shipdata/'
+    fils = glob.glob(ship_path+'*.csv')
+    fils.sort()
+    ship_data = pd.concat([pd.read_csv(fil,parse_dates=[0],index_col=0) for fil in fils])
+    lats = ship_data[' Oden.Ship.LatitudeDegreesFixed'].reindex(radar.time,method='nearest',tolerance='5s')
+    lons = ship_data[' Oden.Ship.LongitudeDegreesFixed'].reindex(radar.time,method='nearest',tolerance='5s')
+    radar = radar.assign(latitude = (['time'],lats.to_numpy(), {'units':"degree_north",'long_name':"Latitude of site",'standard_name':"latitude"}))
+    radar = radar.assign(longitude = (['time'],lons.to_numpy(), {'units':"degree_east",'long_name':"Longitude of site",'standard_name':"longitude"}))
+
     # add meta data
     #radar.attrs['comment'] = 'Radar artifacts have been removed by visual inspection. See quality_flag_artifact. Contact Heather Guy for further information'
     radar.attrs['creator_name'] =	'Heather Guy'
