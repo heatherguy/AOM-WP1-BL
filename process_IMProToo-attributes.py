@@ -21,6 +21,7 @@ import datetime as dt
 import numpy as np
 import matplotlib.dates as mdates
 import pandas as pd
+import glob
 #from matplotlib.colors import DivergingNorm
 
 def decimaldayofyear(date):
