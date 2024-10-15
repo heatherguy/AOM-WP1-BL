@@ -249,7 +249,7 @@ def main():
                       kt2.reindex(time_list,method='nearest',tolerance='1min'),
                       kt1_qc.reindex(time_list,method='nearest',tolerance='1min'),
                       kt2_qc.reindex(time_list,method='nearest',tolerance='1min'),
-                      kt1_corected.reindex(time_list,method='nearest',tolerance='1min')],axis=1) 
+                      kt1_corrected.reindex(time_list,method='nearest',tolerance='1min')],axis=1) 
 
     kt_df.columns=['kt1','kt2','kt1_qc','kt2_qc','kt1_corrected']
 
