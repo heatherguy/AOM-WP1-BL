@@ -6,6 +6,7 @@ import pandas as pd
 import datetime as dt
 import xarray as xr
 import sys
+import glob
 
 ####### INPUTS #######
 # Data location:
