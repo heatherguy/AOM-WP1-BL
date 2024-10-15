@@ -243,7 +243,7 @@ def main():
     kt2,kt2_amb,kt2_qc = get_kt15(kt2_fils,2) 
 
     # Correct for kt1 (met mast) bias. Bias correction is 0.45 K based on comparison during surface melt. 
-    k1_corrected = kt1 + 0.45
+    kt1_corrected = kt1 + 0.45
 
     kt_df = pd.concat([kt1.reindex(time_list,method='nearest',tolerance='1min'),
                       kt2.reindex(time_list,method='nearest',tolerance='1min'),
