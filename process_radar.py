@@ -55,7 +55,7 @@ def main():
     """
     Applies artifact removal and flagging to cloudnetpy netcdfs of  
     RPG-FMCW-94-SP/DP 94 GHz W-band Cloud Doppler Radar data. 
-    Adds additional metadata and formatting
+    Adds additional metadata and formatting & pitch and roll info LV1.nc
     
     Parameters:
         start: Start datetime for processing
@@ -96,6 +96,25 @@ def main():
         lons = ship_data[' Oden.Ship.LongitudeDegreesFixed'].reindex(radar.time,method='nearest',tolerance='5s')
         radar = radar.assign(latitude = (['time'],lats.to_numpy(), {'units':"degree_north",'long_name':"Latitude of site",'standard_name':"latitude"}))
         radar = radar.assign(longitude = (['time'],lons.to_numpy(), {'units':"degree_east",'long_name':"Longitude of site",'standard_name':"longitude"}))
+
+        # Get the correct pitch and roll info from LV1.nc 
+        LV1_path= '/Users/heather/cloudnetpy/data/radar/'
+        lv1_fils = glob.glob(LV1_path+'%s/*.LV1.NC'%dt.datetime.strftime(day,'%y%m%d'))
+        lv1_fils.sort()
+        daily_lv1 = xr.open_mfdataset(lv1_fils)
+        pitch = daily_lv1['Inc_ElA'] # Elevation Axis inclination (deg) radar pitch, - fore-aft tilt (radar tilt to fore -ve)
+        roll = daily_lv1['Inc_El'] # Elevation inclination (deg) -  radar roll, port-starboard tilt (radar tilt to port is -ve)
+        pitch_rads = (np.pi/180)*pitch
+        roll_rads = (np.pi/180)*roll
+        zenith_rads = np.arccos(np.cos(pitch_rads)*np.cos(roll_rads))
+        zenith = zenith_rads/(np.pi/180)
+
+        radar = radar.assign(instrument_pitch_angle = (['time'],pitch.to_numpy(), {'units':"degree",'long_name':"Fore-aft tilt of radar (radar tilt to fore is -ve)"}))
+        radar = radar.assign(instrument_roll_angle = (['time'],roll.to_numpy(), {'units':"degree",'long_name':"Port-starboard tilt of radar (radar tilt to port is -ve)"}))
+        radar = radar.assign(zenith_angle = (['time'],zenith.to_numpy(), {'units':"degree",'long_name':"Zenith angle",'standard_name':"zenith_angle",'comment':"Angle to the local vertical. A value of zero is directly overhead."}))
+
+        # Remove obsolete variables
+        radar = radar.drop_vars(["azimuth_angle"])
     
         # add meta data
         radar.attrs['comment'] = 'Radar artifacts have been removed by visual inspection. See quality_flag_artifact. Contact Heather Guy for further information'
