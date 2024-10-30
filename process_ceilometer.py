@@ -38,6 +38,19 @@ def get_args(args_in):
     # return values:
     return dpath,start,stop,save
 
+def decimaldayofyear(date):
+    '''
+    this function returns the decimal day of year.
+    Input is a date in datetime64 format, changed into datetime object here.
+    The minimum time is microseconds.
+    eg. date = numpy.datetime64('2023-05-09T11:33:02.639000000'), output: 129.481385 (with 6 digit precision),
+    output given in fractional day of year, with respect to 2023 (1 Jan 2023 = day 1)
+    '''
+    seconds_in_a_day=24*60*60
+    total_seconds = (pd.Timestamp(date).hour*60*60) + (pd.Timestamp(date).minute*60) + pd.Timestamp(date).second + pd.Timestamp(date).microsecond*10**(-6)
+    fractional_day_of_year =np.round(pd.Timestamp(date).dayofyear + total_seconds/seconds_in_a_day,6)
+    return fractional_day_of_year
+
 def mdiff(array: np.ndarray) -> float:
     """Returns median difference of 1-D array."""
     return float(ma.median(ma.diff(array)))
@@ -96,19 +109,6 @@ def convert_times_hours(times):
         frac_hours[i]=fractional_hours
 
     return frac_hours
-
-def decimaldayofyear(date):
-    '''
-    this function returns the decimal day of year.
-    Input is a date in datetime64 format, changed into datetime object here.
-    The minimum time is microseconds.
-    eg. date = numpy.datetime64('2023-05-09T11:33:02.639000000'), output: 129.481385 (with 6 digit precision),
-    output given in fractional day of year, with respect to 2023 (1 Jan 2023 = day 1)
-    '''
-    seconds_in_a_day=24*60*60
-    total_seconds = (pd.Timestamp(date).hour*60*60) + (pd.Timestamp(date).minute*60) + pd.Timestamp(date).second + pd.Timestamp(date).microsecond*10**(-6)
-    fractional_day_of_year =np.round(pd.Timestamp(date).dayofyear + total_seconds/seconds_in_a_day,6)
-    return fractional_day_of_year
 
 def ceilometer_noise_filter(beta_raw,heights,time,snr_limit,gates,noise_min,range_corrected=1):
     '''
@@ -197,10 +197,10 @@ def ceilometer_noise_filter(beta_raw,heights,time,snr_limit,gates,noise_min,rang
 
     #  Mask any points where SNR < optimal SNR
     beta_raw_filtered =  beta_raw.copy() 
-    beta_raw_filtered[SNR<snr_limit]=np.nan
+    beta_raw_filtered[((SNR<snr_limit)|(np.isnan(SNR)))]=np.nan
 
     beta_smooth_filtered = beta_smooth.copy()
-    beta_smooth_filtered[SNR<snr_limit]=np.nan
+    beta_smooth_filtered[((SNR<snr_limit)|(np.isnan(SNR)))]=np.nan
 
     return beta_raw_filtered, beta_smooth_filtered,noise_floor,noise_floor1, SNR, beta_smooth_nrc
 
@@ -297,7 +297,7 @@ def main():
         cl_in['calibration_factor']=1.
         cl_in['calibration_factor'].attrs['units'] = '1'
         cl_in['calibration_factor'].attrs['long_name'] = 'Attenuated backscatter calibration factor'
-        cl_in['calibration_factor'].attrs['comment'] = 'Calibration factor applied.'
+        cl_in['calibration_factor'].attrs['comment'] = 'Calibration factor applied (Note that if calibration factor=1, this is equivalent to no calibration applied).'
         
         # Set equial to 1
         #zenith_angle (one value, no coords)
@@ -315,6 +315,7 @@ def main():
         cl_in['zenith_angle'].attrs['units'] = 'degree'
         cl_in['zenith_angle'].attrs['long_name'] = 'Zenith angle'
         cl_in['zenith_angle'].attrs['standard_name'] = 'zenith_angle'
+        cl_in['zenith_angle'].attrs['comment'] = 'This is set at a single value for the purpose of the cloudnetpy algorithm and corresponds to how the ceilometer was configured assuming a level platform. In reality the zenith angle varied between 0-4 degrees when the ship was in motion. This will have essentially no impact on the data for the majority of uses.' 
 
         cl_in.attrs['software_version'] = 202
 
@@ -395,9 +396,18 @@ def main():
         cl_in.attrs['year'] = str(list(set(cl_in.year.to_numpy()))[0])
         cl_in.attrs['month'] = str(list(set(cl_in.month.to_numpy()))[0])    
         cl_in.attrs['day'] = str(list(set(cl_in.day.to_numpy()))[0])    
-    
+
+        # Drop obsolete variables: 
+        cl_in = cl_in.drop_vars(['backscatter_profile', 'ceilometer_range','range_levels'])
+
+        # add SNR
+        cl_in = cl_in.assign(SNR = (['time','range'],SNR, {'units':"1",'long_name':"Signal to noise ratio",'description':"Signal to noise ratio calculated following the method of Kotthaus et al., 2016 (doi:10.5194/amt-9-3769-2016) (Eq. 15). Minimum noise level is the median value of the nosie floor throughout the ARTofMELT campaign: %.2e. "%noise_min}))
+        cl_in['time'].attrs['_FillValue']=False
+        
         # add meta data
-        cl_in.attrs['comment'] = 'Noise filtering has been applied following the method of Kotthaus et al., 2016 (doi:10.5194/amt-9-3769-2016)'
+        del cl_in.attrs['acknowledgement']
+        del cl_in.attrs['comments']
+        cl_in.attrs['comment'] = 'Noise filtering has been applied following the method of Kotthaus et al., 2016 (doi:10.5194/amt-9-3769-2016). Minimum noise level (the median value of the nosie floor throughout the ARTofMELT campaign): %.2e. SNR limit (calculated using welch t-tests as in fig. 9, kotthause et al., 2016): %s'%(noise_min,snr_limit)
         cl_in.attrs['creator_name'] =	'Heather Guy'
         cl_in.attrs['creator_email'] =	'heather.guy@ncas.ac.uk'
         cl_in.attrs['creator_url'] =	'https://orcid.org/0000-0003-3525-0766'
@@ -407,12 +417,12 @@ def main():
         cl_in.attrs['title'] =	'CL31 ceilometer data from ARTofMELT 2023'
         cl_in.attrs['featureType'] =	'timeSeries'
 
-        cl_in.attrs['time_coverage_start'] = str(cl_in.time.min().data)
-        cl_in.attrs['time_coverage_end'] = str(cl_in.time.max().data)
+        cl_in.attrs['time_coverage_start'] = dt.datetime.strftime(day + dt.timedelta(hours=float(cl_in.time.min().data)),'%d %b %Y, %H:%M UTC')
+        cl_in.attrs['time_coverage_end'] = dt.datetime.strftime(day + dt.timedelta(hours=float(cl_in.time.max().data)),'%d %b %Y, %H:%M UTC')
         cl_in.attrs['geospatial_bounds'] = "%sN, %sE, %sN, %sE"%(str(cl_in.latitude.max().data),str(cl_in.longitude.min().data),str(cl_in.latitude.min().data),str(cl_in.longitude.max().data))
         cl_in.attrs['platform_altitude'] = "Oden 7th deck, ~25 m a.s.l"
 
-        # Make sure the height is correct assuming a height amsl of 20m on the 4th deck
+        # Make sure the height is correct assuming a height amsl of 25m on the 4th deck
         cl_in = cl_in.assign(altitude = np.array(25.))
         
         cl_in.attrs['location_keywords'] = "Oden, Arctic Ocean, Fram Strait, atmosphere, profile, on the ship"
@@ -431,6 +441,8 @@ def main():
         cl_in.attrs['additional_creator_name'] = "Sonja Murto"
         cl_in.attrs['additional_creator_email'] = "sonja.murto@misu.su.se "
         cl_in.attrs['additional_creator_url'] = "https://orcid.org/0000-0002-4966-9077"
+        cl_in.attrs['input_file_reference'] = 'Sonja Murto, Michael Tjernström, Michail Karalis, John Prytherch (2024) Cloud base heights and atmospheric backscatter observations from expedition ARTofMELT, Arctic Ocean, 2023. Dataset version 1. Bolin Centre Database. https://doi.org/10.17043/oden-artofmelt-2023-ceilometer-1'
+        cl_in.attrs['history'] = "Noise filtering procedure applied and variable names modified to match the correct format for cloudnetpy input, applied to input file: %s"%dpath[-54:]
 
         # add decimal doy
         cl_in = cl_in.assign(day_of_year = (['time'],[decimaldayofyear(t) for t in cl_in.time.data], {'units':"1",'long_name':"Day of Year",'description':"time as decimal day of year"}))
