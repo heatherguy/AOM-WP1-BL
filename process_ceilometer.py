@@ -298,7 +298,8 @@ def main():
         cl_in['calibration_factor'].attrs['units'] = '1'
         cl_in['calibration_factor'].attrs['long_name'] = 'Attenuated backscatter calibration factor'
         cl_in['calibration_factor'].attrs['comment'] = 'Calibration factor applied (Note that if calibration factor=1, this is equivalent to no calibration applied).'
-        
+
+        # Make sure the height is correct assuming a height amsl of 25m on the 4th deck
         cl_in['altitude']=25.
         cl_in['altitude'].attrs['units'] = 'm'
         cl_in['altitude'].attrs['long_name'] = 'Altitude of site'
@@ -425,11 +426,7 @@ def main():
         cl_in.attrs['time_coverage_start'] = dt.datetime.strftime(day + dt.timedelta(hours=float(cl_in.time.min().data)),'%d %b %Y, %H:%M UTC')
         cl_in.attrs['time_coverage_end'] = dt.datetime.strftime(day + dt.timedelta(hours=float(cl_in.time.max().data)),'%d %b %Y, %H:%M UTC')
         cl_in.attrs['geospatial_bounds'] = "%sN, %sE, %sN, %sE"%(str(cl_in.latitude.max().data),str(cl_in.longitude.min().data),str(cl_in.latitude.min().data),str(cl_in.longitude.max().data))
-        cl_in.attrs['platform_altitude'] = "Oden 7th deck, ~25 m a.s.l"
-
-        # Make sure the height is correct assuming a height amsl of 25m on the 4th deck
-        cl_in = cl_in.assign(altitude = np.array(25.))
-        
+        cl_in.attrs['platform_altitude'] = "Oden 7th deck, ~25 m a.s.l
         cl_in.attrs['location_keywords'] = "Oden, Arctic Ocean, Fram Strait, atmosphere, profile, on the ship"
         cl_in.attrs['date_created'] = dt.datetime.strftime(dt.datetime.now(),'%d %b %Y %H:%M')
         cl_in.attrs['institution']="Stockholm University and the University of Leeds"
