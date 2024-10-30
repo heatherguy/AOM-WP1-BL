@@ -326,13 +326,9 @@ def main():
         cl_in.attrs['software_version'] = 202
 
         # modify range
-        cl_in['range']=cl_in['height'] - 25.
-        cl_in['range'].attrs['units'] = 'm'
-        cl_in['range'].attrs['long_name'] = 'Range from instrument'
-        cl_in['range'].attrs['standard_name'] = 'Distance from instrument to centre of each range bin.'
-        cl_in['range'].attrs['axis'] ='Z'
-        cl_in = cl_in.swap_dims({'range_levels':'range'})
-
+        cl_in=cl_in.assign(range=(['range_levels'],cl_in['height'].to_numpy() - 25., {'units':"m",'long_name':"Range from instrument",'description':"Distance from instrument to centre of each range bin.",'axis':'Z'}))
+        cl_in=cl_in.swap_dims({'range_levels':'range'})
+        
         # do the noise filtering 
         # noise filtering options: 
         
@@ -353,7 +349,7 @@ def main():
         
         # add to dataframe
         cl_in['beta_smooth']=xr.DataArray(beta_smooth_filtered, dims=['time', 'range'],
-                                        coords={'time':cl_in.time,'range':(cl_in['height'] - 25.).data},
+                                        coords={'time':cl_in.time,'range':cl_in.range},
                                    attrs={'long_name': 'Attenuated backscatter coefficient',
                                           'units' :"sr-1 m-1",
                                           'comment': "SNR-screened attenuated backscatter coefficient.\nWeak background smoothed using Gaussian 2D-kernel. SNR threshold applied: %s"%snr_limit})# ,
