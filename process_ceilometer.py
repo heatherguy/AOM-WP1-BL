@@ -401,7 +401,7 @@ def main():
         cl_in.attrs['cloudnet_file_type'] = "lidar"
         cl_in.attrs['year'] = str(list(set(cl_in.year.to_numpy()))[0])
         cl_in.attrs['month'] = str(list(set(cl_in.month.to_numpy()))[0])    
-        cl_in.attrs['day'] = str(list(set(cl_in.day.to_numpy()))[0])    
+        cl_in.attrs['day'] = str(list(set(cl_in.day.to_numpy()))[0]) 
 
         # Drop obsolete variables: 
         cl_in = cl_in.drop_vars(['backscatter_profile', 'ceilometer_range','range_levels'])
@@ -409,6 +409,9 @@ def main():
         # add SNR
         cl_in = cl_in.assign(SNR = (['time','range'],SNR, {'units':"1",'long_name':"Signal to noise ratio",'description':"Signal to noise ratio calculated following the method of Kotthaus et al., 2016 (doi:10.5194/amt-9-3769-2016) (Eq. 15). Minimum noise level is the median value of the nosie floor throughout the ARTofMELT campaign: %.2e. "%noise_min}))
         cl_in['time'].attrs['_FillValue']=False
+
+        # Need to make sure time is < 25
+        cl_in=cl_in.sel(time=slice(0,25)).copy()
         
         # add meta data
         del cl_in.attrs['acknowledgement']
@@ -426,7 +429,7 @@ def main():
         cl_in.attrs['time_coverage_start'] = dt.datetime.strftime(day + dt.timedelta(hours=float(cl_in.time.min().data)),'%d %b %Y, %H:%M UTC')
         cl_in.attrs['time_coverage_end'] = dt.datetime.strftime(day + dt.timedelta(hours=float(cl_in.time.max().data)),'%d %b %Y, %H:%M UTC')
         cl_in.attrs['geospatial_bounds'] = "%sN, %sE, %sN, %sE"%(str(cl_in.latitude.max().data),str(cl_in.longitude.min().data),str(cl_in.latitude.min().data),str(cl_in.longitude.max().data))
-        cl_in.attrs['platform_altitude'] = "Oden 7th deck, ~25 m a.s.l
+        cl_in.attrs['platform_altitude'] = "Oden 7th deck, ~25 m a.s.l"
         cl_in.attrs['location_keywords'] = "Oden, Arctic Ocean, Fram Strait, atmosphere, profile, on the ship"
         cl_in.attrs['date_created'] = dt.datetime.strftime(dt.datetime.now(),'%d %b %Y %H:%M')
         cl_in.attrs['institution']="Stockholm University and the University of Leeds"
