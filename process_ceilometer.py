@@ -299,6 +299,11 @@ def main():
         cl_in['calibration_factor'].attrs['long_name'] = 'Attenuated backscatter calibration factor'
         cl_in['calibration_factor'].attrs['comment'] = 'Calibration factor applied (Note that if calibration factor=1, this is equivalent to no calibration applied).'
         
+        cl_in['altitude']=25.
+        cl_in['altitude'].attrs['units'] = 'm'
+        cl_in['altitude'].attrs['long_name'] = 'Altitude of site'
+        cl_in['altitude'].attrs['standard_name'] = 'altitude'
+        
         # Set equial to 1
         #zenith_angle (one value, no coords)
         #float32
