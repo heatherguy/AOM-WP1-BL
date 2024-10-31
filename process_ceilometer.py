@@ -239,8 +239,11 @@ def main():
     for i in range(0,len(all_dates)):
         day = all_dates[i].to_pydatetime()
         print(day)
-        cl_in = cl_all.sel(time=slice(day,day+dt.timedelta(hours=24,minutes=60,seconds=59))).copy()
-        
+        #cl_in = cl_all.sel(time=slice(day,day+dt.timedelta(hours=24,minutes=60,seconds=59))).copy()
+
+        # Start initially with some time flex on either side for interpolation.
+        cl_in = cl_all.sel(time=slice(day-dt.timedelta(minutes=10),day+dt.timedelta(hours=25))).copy()
+
         if cl_in.time.size == 0:
             print('No data found, skipping ')
             continue
@@ -360,16 +363,16 @@ def main():
         cl_in['beta_raw']=xr.DataArray(beta_raw, dims=['time', 'range'], 
             attrs={'long_name': 'Attenuated backscatter coefficient',
             'units' :"sr-1 m-1",
-            'comment': "Non-screened attenuated backscatter coefficient." ,
-              '_FillValue': 9.96921E36,
-              '_ChunkSizes': [1440, 385]})
+            'comment': "Non-screened attenuated backscatter coefficient." ,})
+            #'_FillValue': float('nan'),
+            #'_ChunkSizes': [1440, 385]})
         
         cl_in['beta']=xr.DataArray(beta_raw_filtered, dims=['time', 'range'], 
             attrs={'long_name': 'Attenuated backscatter coefficient',
             'units' :"sr-1 m-1",
-            'comment': "SNR-screened attenuated backscatter coefficient. SNR threshold applied: %s"%snr_limit ,
-              '_FillValue': 9.96921E36,
-              '_ChunkSizes': [1440, 385]})
+            'comment': "SNR-screened attenuated backscatter coefficient. SNR threshold applied: %s"%snr_limit ,})
+            #'_FillValue': float('nan'),
+            #'_ChunkSizes': [1440, 385]})
         
         # Update latitude and longitude using ship data
         # Get ship data
@@ -406,8 +409,10 @@ def main():
         cl_in = cl_in.assign(SNR = (['time','range'],SNR, {'units':"1",'long_name':"Signal to noise ratio",'description':"Signal to noise ratio calculated following the method of Kotthaus et al., 2016 (doi:10.5194/amt-9-3769-2016) (Eq. 15). Minimum noise level is the median value of the nosie floor throughout the ARTofMELT campaign: %.2e. "%noise_min}))
         cl_in['time'].attrs['_FillValue']=False
 
-        # Need to make sure time is < 25
-        cl_in=cl_in.sel(time=slice(0,25)).copy()
+        # Need to make sure time is < 25 & even in all files
+        # resample and crop
+        cl_in = cl_in.reindex(time=np.linspace(0,25,3000),method='nearest')
+        cl_in=cl_in.sel(time=slice(0,24)).copy()
         
         # add meta data
         del cl_in.attrs['acknowledgement']
