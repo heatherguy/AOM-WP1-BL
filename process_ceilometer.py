@@ -7,7 +7,6 @@ import datetime as dt
 import xarray as xr
 import sys
 import glob
-from scipy.ndimage import gaussian_filter
 from numpy import ma
 from numpy.lib.stride_tricks import sliding_window_view
 
@@ -54,34 +53,6 @@ def decimaldayofyear(date):
 def mdiff(array: np.ndarray) -> float:
     """Returns median difference of 1-D array."""
     return float(ma.median(ma.diff(array)))
-    
-def calc_sigma_units(
-    time_vector: np.ndarray, range_los: np.ndarray
-) -> tuple[float, float]:
-    """Calculates Gaussian peak std parameters.
-
-    The amount of smoothing is hard coded. This function calculates
-    how many steps in time and height corresponds to this smoothing.
-
-    Args:
-        time_vector: 1D vector (fraction hour).
-        range_los: 1D vector (m).
-
-    Returns:
-        tuple: Two element tuple containing number of steps in time and height to
-            achieve wanted smoothing.
-
-    """
-    #if len(time_vector) == 0 or np.max(time_vector) > 24:
-    #    raise ValueError("Invalid time vector")
-    minutes_in_hour = 60
-    sigma_minutes = 2
-    sigma_metres = 5
-    time_step = mdiff(time_vector) * minutes_in_hour
-    alt_step = mdiff(range_los)
-    x_std = sigma_minutes / time_step
-    y_std = sigma_metres / alt_step
-    return x_std, y_std
 
 def nan_helper(y):
     """Helper to handle indices and logical indices of NaNs.
@@ -139,9 +110,33 @@ def ceilometer_noise_filter(beta_raw,heights,time,snr_limit,gates,noise_min,rang
         non_range_corrected = beta_raw.copy()
         beta_raw = beta_raw * (heights**2)
 
-    # Calculated the smoothed backscatter using the same gaussian filter used in cloudnet
-    sigma = calc_sigma_units(time, heights)
-    beta_smooth_nrc = gaussian_filter(non_range_corrected, sigma)
+    # Calculated the smoothed backscatter
+    # Using a rolling mean
+    # Roling mean windows selected to minimise missing data and maximise SNR
+    time_int=(np.diff(time)*60)[0] # native time interval in minutes, assumes constant
+    rolling_mins = 5 # minutes for rolling mean
+    range_int =list(set(np.diff(heights)))[0] # Native vertical resolution, assumes constant
+    rolling_m = 50 # m for rolling mean
+    
+    # Cloudnet uses a gaussian filter
+    #sigma = calc_sigma_units(time, heights)
+    #beta_smooth_nrc = gaussian_filter(non_range_corrected, sigma)
+    sliding_window_xstep = int(rolling_mins/time_int)
+    sliding_window_ystep = int(rolling_m/range_int)
+    # Make sure that both steps are odd
+    if sliding_window_xstep%2==0:
+        sliding_window_xstep=sliding_window_xstep-1
+    if sliding_window_ystep%2==0:
+        sliding_window_ystep=sliding_window_ystep-1    
+
+    print('Smoothing window is %.1f minutes and %s m'%(sliding_window_xstep*time_int,sliding_window_ystep*range_int))
+    
+    sliding_window = sliding_window_view(non_range_corrected,[sliding_window_xstep,sliding_window_ystep])
+    beta_smooth_nrc = np.mean(sliding_window,axis=(2,3))
+    # Pad the sliding window view with nans
+    beta_smooth_nrc = np.pad(beta_smooth_nrc,((int((int(rolling_mins/time_int)-1)/2),int((int(rolling_mins/time_int)-1)/2)),(int((int(rolling_m/range_int)-1)/2),int((int(rolling_m/range_int)-1)/2))), mode='constant',constant_values=np.nan)
+    #print(np.shape(beta_smooth_nrc))
+
     beta_smooth = beta_smooth_nrc * (heights**2)
 
     # Calculate the noise floor:  the mean β plus standard deviation σβ of the attenuated backscatter β 
@@ -202,7 +197,7 @@ def ceilometer_noise_filter(beta_raw,heights,time,snr_limit,gates,noise_min,rang
     beta_smooth_filtered = beta_smooth.copy()
     beta_smooth_filtered[((SNR<snr_limit)|(np.isnan(SNR)))]=np.nan
 
-    return beta_raw_filtered, beta_smooth_filtered,noise_floor,noise_floor1, SNR, beta_smooth_nrc
+    return beta_raw_filtered, beta_smooth_filtered,noise_floor,noise_floor1, SNR, beta_smooth_nrc,sliding_window_xstep*time_int,sliding_window_ystep*range_int
 
 
 
@@ -337,7 +332,7 @@ def main():
         
         # The snr limit is calculated by looking at the welch t-test acceptance plot (like fig 9 in kotthause et al., 2016)
         # when more than 90% of values are significantly (p<0.01) from the noise. This is about 10. 
-        snr_limit=10
+        snr_limit=20
         #  for the summit data I'm looking at, the top 5 gates are zero anyway, so use to 7215 to 7515 (gates -16 to -5)
         # for aom top 300 m is the top 31 gates
         gates = 31 
@@ -348,14 +343,14 @@ def main():
         
         # Do the noise filtering
         beta_raw = cl_in['beta_raw'].to_numpy()
-        beta_raw_filtered, beta_smooth_filtered,noise_floor,noise_floor1, SNR, beta_smooth_nrc = ceilometer_noise_filter(beta_raw,cl_in['range'].to_numpy(),frac_hours,snr_limit,gates,noise_min,range_corrected)
+        beta_raw_filtered, beta_smooth_filtered,noise_floor,noise_floor1, SNR, beta_smooth_nrc,x_smoothing,y_smoothing = ceilometer_noise_filter(beta_raw,cl_in['range'].to_numpy(),frac_hours,snr_limit,gates,noise_min,range_corrected)
         
         # add to dataframe
         cl_in['beta_smooth']=xr.DataArray(beta_smooth_filtered, dims=['time', 'range'],
                                         coords={'time':cl_in.time,'range':cl_in.range},
                                    attrs={'long_name': 'Attenuated backscatter coefficient',
                                           'units' :"sr-1 m-1",
-                                          'comment': "SNR-screened attenuated backscatter coefficient.\nWeak background smoothed using Gaussian 2D-kernel. SNR threshold applied: %s"%snr_limit})# ,
+                                          'comment': "SNR-screened attenuated backscatter coefficient.\nWeak background smoothed using a 2D rolling mean window of %.f minutes and %.1f m. SNR threshold applied: %s"%(x_smoothing,y_smoothing,snr_limit)})# ,
                                           #  '_FillValue': 9.96921E36,
                                           #  '_ChunkSizes': [1440, 385]})
         
