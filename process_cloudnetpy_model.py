@@ -34,11 +34,12 @@ def get_args(args_in):
         save = args_in[3]
         start = dt.datetime.strptime(args_in[4],'%y%m%d')
         stop = dt.datetime.strptime(args_in[5],'%y%m%d')
+        calc_atten=args_in[6]
     except:
         print('Input error')
         sys.exit()
     # return values:
-    return dpath,start,stop,save,mwps_path
+    return dpath,start,stop,save,mwps_path,calc_atten
 
 def decimaldayofyear(date):
     '''
@@ -58,7 +59,7 @@ def main():
     """
     Gets corrected hatpro temperature and humidity data
     Winds from interpolated radiosondes
-    Calculates radar attenuation characteristics using mwps
+    Calculates radar attenuation characteristics using mwps (optional)
     Generates the 'model' file for use in cloudnetpy. 
     Adds additional metadata and formatting
     
@@ -68,6 +69,7 @@ def main():
         save:  Output directory
         start: Start datetime for processing
         stop:  Stop datetime for processing
+        calc_atten: True or false, calculate radar attenuation characteristics using mwps?
         
     Returns:
         None
@@ -75,7 +77,7 @@ def main():
     """
     
     # check / get args:
-    dpath,start,stop,outdir,mwps_path = get_args(sys.argv)
+    dpath,start,stop,outdir,mwps_path,calc_atten = get_args(sys.argv)
     all_dates = pd.date_range(start,stop)
 
     # Get mwr data
@@ -130,74 +132,78 @@ def main():
                                'uwind':(('time','level'),u.to_numpy()),
                                'vwind':(('time','level'),v.to_numpy()),
                                'q':(('time','level'),sphum),})
-        
-        # Run the model to calculate radar attenuation
-        # mwps-0.8.1
-        # Run propagation ccal
-        # propagation: reads frequency, temperature, pressure and 
-        # humidity and returns propagation parameters
-        save_loc='./temp/'
-        frequencies = np.asarray([35,94])
-        temperatures = model['temperature'].to_numpy()
-        print(np.shape(temperatures))
-        pressures = model['pressure'].to_numpy()
-        print(np.shape(pressures))
-        rhs = model['rh'].to_numpy()
-        print(np.shape(rhs))
-        print('Generating input for mwps..')
-        gen_prop_input(frequencies,temperatures,pressures,rhs,save_loc,overwrite=True)
-        print('Running mwps')
-        [gas_atten_1way,liq_atten_1way,k2] = run_prop_cal(save_loc+'atmos.temp',mwps_path)
-        [gas_dry_1way,liq_dry_1way,k2_dry] = run_prop_cal(save_loc+'atmos_dry.temp',mwps_path)
-        [gas_sat_1way,liq_sat_1way,k2_sat] = run_prop_cal(save_loc+'atmos_sat.temp',mwps_path)
-        
-        # First reshape the output back onto the time-height-frequency demain
-        specific_gas_1way=np.reshape(gas_atten_1way,[len(frequencies),len(model.time),len(model.level)])
-        specific_liq_1way=np.reshape(liq_atten_1way,[len(frequencies),len(model.time),len(model.level)])
-        gas_attenuation=calc_2way_gas_atten(specific_gas_1way,frequencies,model.time.to_numpy(),model.level.to_numpy())
-        liquid_attenuation=calc_2way_gas_atten(specific_liq_1way,frequencies,model.time.to_numpy(),model.level.to_numpy())
-        
-        # Add new variables 
-        model['gas_atten']=(('frequency','time', 'level'), gas_attenuation)
-        model.gas_atten.attrs['missing_value'] = np.nan
-        model.gas_atten.attrs['long_name'] = "Two-way attenuation from the ground due to atmospheric gases"
-        model.gas_atten.attrs['units'] = "dB"
-        model.gas_atten.attrs['_FillValue'] = np.nan
-        
-        model['K2']=(('frequency','time', 'level'), np.reshape(k2,[len(frequencies),len(model.time),len(model.level)]))
-        model.K2.attrs['units_html'] = "db km<sup>-1</sup>"
-        model.K2.attrs['missing_value'] = np.nan
-        model.K2.attrs['_FillValue'] = np.nan
-        model.K2.attrs['long_name'] = "Dielectric parameter (|K|^2) of liquid water"
-        model.K2.attrs['units'] = "dB km-1"
-        
-        model['specific_dry_gas_atten']=(('frequency','time', 'level'), np.reshape(gas_dry_1way,[len(frequencies),len(model.time),len(model.level)]))
-        model.specific_dry_gas_atten.attrs['units_html'] = "db km<sup>-1</sup>"
-        model.specific_dry_gas_atten.attrs['missing_value'] = np.nan
-        model.specific_dry_gas_atten.attrs['long_name'] = "Specific one-way attenuation due to atmospheric gases for dry air (no water vapour)"
-        model.specific_dry_gas_atten.attrs['units'] = "dB km-1"
-        model.specific_dry_gas_atten.attrs['_FillValue'] = np.nan
-        
-        model['specific_gas_atten']=(('frequency','time', 'level'), specific_gas_1way)
-        model.specific_gas_atten.attrs['long_name'] = "Specific one-way attenuation due to atmospheric gases"
-        model.specific_gas_atten.attrs['units'] = "dB km-1"
-        model.specific_gas_atten.attrs['units_html'] = "db km<sup>-1</sup>"
-        model.specific_gas_atten.attrs['missing_value'] = np.nan
-        model.specific_gas_atten.attrs['_FillValue'] = np.nan
-        
-        model['specific_liquid_atten']=(('frequency','time', 'level'), specific_liq_1way)
-        model.specific_liquid_atten.attrs['units_html'] = "(dB km<sup>-1</sup>)/(g m<sup>-3</sup>)"
-        model.specific_liquid_atten.attrs['missing_value'] = np.nan
-        model.specific_liquid_atten.attrs['units'] = "(dB km-1)/(g m-3)"
-        model.specific_liquid_atten.attrs['_FillValue'] = np.nan
-        model.specific_liquid_atten.attrs['long_name'] = "Specific one-way attenuation due to liquid water, per unit liquid water content"
-        
-        model['specific_saturated_gas_atten']=(('frequency','time', 'level'), np.reshape(gas_sat_1way,[len(frequencies),len(model.time),len(model.level)]))
-        model.specific_saturated_gas_atten.attrs['long_name'] = "Specific one-way attenuation due to atmospheric gases for saturated air (saturated with respect to ice below 0 degrees C)"
-        model.specific_saturated_gas_atten.attrs['units'] = "dB km-1"
-        model.specific_saturated_gas_atten.attrs['units_html'] = "db km<sup>-1</sup>"
-        model.specific_saturated_gas_atten.attrs['missing_value'] = np.nan
-        model.specific_saturated_gas_atten.attrs['_FillValue'] = np.nan
+
+        if calc_atten==True: 
+            print('Calculating attenuations..')
+            # Run the model to calculate radar attenuation
+            # mwps-0.8.1
+            # Run propagation ccal
+            # propagation: reads frequency, temperature, pressure and 
+            # humidity and returns propagation parameters
+            save_loc='./temp/'
+            frequencies = np.asarray([35,94])
+            temperatures = model['temperature'].to_numpy()
+            pressures = model['pressure'].to_numpy()
+            rhs = model['rh'].to_numpy()
+            print('Generating input for mwps..')
+            gen_prop_input(frequencies,temperatures,pressures,rhs,save_loc,overwrite=True)
+            print('Running mwps')
+            [gas_atten_1way,liq_atten_1way,k2] = run_prop_cal(save_loc+'atmos.temp',mwps_path)
+            [gas_dry_1way,liq_dry_1way,k2_dry] = run_prop_cal(save_loc+'atmos_dry.temp',mwps_path)
+            [gas_sat_1way,liq_sat_1way,k2_sat] = run_prop_cal(save_loc+'atmos_sat.temp',mwps_path)
+            
+            # First reshape the output back onto the time-height-frequency demain
+            specific_gas_1way=np.reshape(gas_atten_1way,[len(frequencies),len(model.time),len(model.level)])
+            specific_liq_1way=np.reshape(liq_atten_1way,[len(frequencies),len(model.time),len(model.level)])
+            
+            # Fill the highest level with a duplication 
+            specific_gas_1way[:,:,-1] = specific_gas_1way[:,:,-2]
+            specific_liq_1way[:,:,-1] = specific_liq_1way[:,:,-2]
+            
+            gas_attenuation=calc_2way_gas_atten(specific_gas_1way,frequencies,model.time.to_numpy(),model.level.to_numpy())
+            liquid_attenuation=calc_2way_gas_atten(specific_liq_1way,frequencies,model.time.to_numpy(),model.level.to_numpy())
+            
+            # Add new variables 
+            model['gas_atten']=(('frequency','time', 'level'), gas_attenuation)
+            model.gas_atten.attrs['missing_value'] = np.nan
+            model.gas_atten.attrs['long_name'] = "Two-way attenuation from the ground due to atmospheric gases"
+            model.gas_atten.attrs['units'] = "dB"
+            model.gas_atten.attrs['_FillValue'] = np.nan
+            
+            model['K2']=(('frequency','time', 'level'), np.reshape(k2,[len(frequencies),len(model.time),len(model.level)]))
+            model.K2.attrs['units_html'] = "db km<sup>-1</sup>"
+            model.K2.attrs['missing_value'] = np.nan
+            model.K2.attrs['_FillValue'] = np.nan
+            model.K2.attrs['long_name'] = "Dielectric parameter (|K|^2) of liquid water"
+            model.K2.attrs['units'] = "dB km-1"
+            
+            model['specific_dry_gas_atten']=(('frequency','time', 'level'), np.reshape(gas_dry_1way,[len(frequencies),len(model.time),len(model.level)]))
+            model.specific_dry_gas_atten.attrs['units_html'] = "db km<sup>-1</sup>"
+            model.specific_dry_gas_atten.attrs['missing_value'] = np.nan
+            model.specific_dry_gas_atten.attrs['long_name'] = "Specific one-way attenuation due to atmospheric gases for dry air (no water vapour)"
+            model.specific_dry_gas_atten.attrs['units'] = "dB km-1"
+            model.specific_dry_gas_atten.attrs['_FillValue'] = np.nan
+            
+            model['specific_gas_atten']=(('frequency','time', 'level'), specific_gas_1way)
+            model.specific_gas_atten.attrs['long_name'] = "Specific one-way attenuation due to atmospheric gases"
+            model.specific_gas_atten.attrs['units'] = "dB km-1"
+            model.specific_gas_atten.attrs['units_html'] = "db km<sup>-1</sup>"
+            model.specific_gas_atten.attrs['missing_value'] = np.nan
+            model.specific_gas_atten.attrs['_FillValue'] = np.nan
+            
+            model['specific_liquid_atten']=(('frequency','time', 'level'), specific_liq_1way)
+            model.specific_liquid_atten.attrs['units_html'] = "(dB km<sup>-1</sup>)/(g m<sup>-3</sup>)"
+            model.specific_liquid_atten.attrs['missing_value'] = np.nan
+            model.specific_liquid_atten.attrs['units'] = "(dB km-1)/(g m-3)"
+            model.specific_liquid_atten.attrs['_FillValue'] = np.nan
+            model.specific_liquid_atten.attrs['long_name'] = "Specific one-way attenuation due to liquid water, per unit liquid water content"
+            
+            model['specific_saturated_gas_atten']=(('frequency','time', 'level'), np.reshape(gas_sat_1way,[len(frequencies),len(model.time),len(model.level)]))
+            model.specific_saturated_gas_atten.attrs['long_name'] = "Specific one-way attenuation due to atmospheric gases for saturated air (saturated with respect to ice below 0 degrees C)"
+            model.specific_saturated_gas_atten.attrs['units'] = "dB km-1"
+            model.specific_saturated_gas_atten.attrs['units_html'] = "db km<sup>-1</sup>"
+            model.specific_saturated_gas_atten.attrs['missing_value'] = np.nan
+            model.specific_saturated_gas_atten.attrs['_FillValue'] = np.nan
         
         # Add attributes
         # label as cloudnet model file
@@ -286,8 +292,13 @@ def main():
         model.attrs['additional_creator_email'] = "sonja.murto@misu.su.se "
         model.attrs['additional_creator_url'] = "https://orcid.org/0000-0002-4966-9077"
         model.attrs['input_file_reference'] = 'Michael Tjernström, Sonja Murto, Michail Karalis, John Prytherch (2024) Temperature and humidity profiles from microwave radiometer during expedition ARTofMELT, Arctic Ocean, 2023. Dataset version 1. Bolin Centre Database. https://doi.org/10.17043/oden-artofmelt-2023-microwave-profiles-1\nSonja Murto, Michael Tjernström, Ian Brooks, Heather Guy, Michail Karalis, Timo Vihma, Gabin Urbancic, John Prytherch (2024) Radiosonde profiles from expedition ARTofMELT, Arctic Ocean, 2023. Dataset version 1. Bolin Centre Database. https://doi.org/10.17043/oden-artofmelt-2023-radiosonde-1'
-        model.attrs['history'] = "Input file %s created on %s. Input file %s created on %s. Radar attenuation parameters calculated using mwps-0.8.1. Names modified to match the correct format for cloudnetpy input."%(in_fil_name,hatpro.last_revised_date, radiosonde_fil,radiosondes.last_revised_date)
-        model.attrs['comment'] = 'This file consists of vertical atmospheric profiles of air temperature and humidity as well as radar attenuation characteristics from the location of the Icebreaker Oden during the ARTofMELT campaign. The file has been specifically formatted as an input *model* file for the cloudnetpy retrieval algorithm. The data are derived from the temperature and humidity retrievals from an RPG-HATPRO radiometer that has had a bias correction applied by interpolating 6-hourly radiosonde profiles. See the *input_file_reference* for more information regarding the bias correction. Wind and pressure data included in the file are just from the interpolated radiosonde data, and the attenuation parameters were calculated from the temperature and humidity profiles using mwps version 0.8.1 by Robin Hogan, 2002.'
+        if calc_atten==True:
+            model.attrs['history'] = "Input file %s created on %s. Input file %s created on %s. Radar attenuation parameters calculated using mwps-0.8.1. Names modified to match the correct format for cloudnetpy input."%(in_fil_name,hatpro.last_revised_date, radiosonde_fil,radiosondes.last_revised_date)
+            model.attrs['comment'] = 'This file consists of vertical atmospheric profiles of air temperature and humidity as well as radar attenuation characteristics from the location of the Icebreaker Oden during the ARTofMELT campaign. The file has been specifically formatted as an input *model* file for the cloudnetpy retrieval algorithm. The data are derived from the temperature and humidity retrievals from an RPG-HATPRO radiometer that has had a bias correction applied by interpolating 6-hourly radiosonde profiles. See the *input_file_reference* for more information regarding the bias correction. Wind and pressure data included in the file are just from the interpolated radiosonde data, and the attenuation parameters were calculated from the temperature and humidity profiles using mwps version 0.8.1 by Robin Hogan, 2002.'
+        else:
+            model.attrs['history'] = "Input file %s created on %s. Input file %s created on %s. Names modified to match the correct format for cloudnetpy input."%(in_fil_name,hatpro.last_revised_date, radiosonde_fil,radiosondes.last_revised_date)
+            model.attrs['comment'] = 'This file consists of vertical atmospheric profiles of air temperature and humidity from the location of the Icebreaker Oden during the ARTofMELT campaign. The file has been specifically formatted as an input *model* file for the cloudnetpy retrieval algorithm. The data are derived from the temperature and humidity retrievals from an RPG-HATPRO radiometer that has had a bias correction applied by interpolating 6-hourly radiosonde profiles. See the *input_file_reference* for more information regarding the bias correction. Wind and pressure data included in the file are just from the interpolated radiosonde data.'            
+        
         model.attrs['product_name'] = "RPG-HATPRO radiometer temperature and humidity profiles with (6-hourly) radiosonde bias correction"
         model.attrs['source'] = "RPG-HATPRO radiometer; 6-hourly Vaisala Digicora 5.4.0 radiosounding system with RS41 sondes"
         model.attrs['location'] = "Arctic Ocean; Fram Strait"

@@ -281,19 +281,32 @@ def main():
         cnp_fil.attrs['project_principal_investigator'] = "Michael Tjernström"
         cnp_fil.attrs['project_principal_investigator_email'] = "michaelt@misu.su.se"
         cnp_fil.attrs['project_principal_investigator_url'] = "https://orcid.org/0000-0002-6908-7410"
-        cnp_fil.attrs['additional_creator_name'] = "John Prytherch"
-        cnp_fil.attrs['additional_creator_email'] = "john.prytherch@misu.su.se"
-        cnp_fil.attrs['additional_creator_url'] = "https://orcid.org/0000-0003-1209-289X"
-        cnp_fil.attrs['additional_creator_name'] = "Sonja Murto"
-        cnp_fil.attrs['additional_creator_email'] = "sonja.murto@misu.su.se "
-        cnp_fil.attrs['additional_creator_url'] = "https://orcid.org/0000-0002-4966-9077"
-        cnp_fil.attrs['input_file_references'] = 'Radar: Heather Guy, Ian Brooks, Sonja Murto, Michael Tjernström, Michail Karalis, John Prytherch (2024) Cloud radar data from expedition ARTofMELT, Arctic Ocean, 2023. Dataset version 1. Bolin Centre Database. https://doi.org/10.17043/oden-artofmelt-2023-cloud-radar-1,\n Lidar: Heather Guy, Sonja Murto, Michael Tjernström, Michail Karalis, John Prytherch, Ian Brooks (2024) Cloud base heights and atmospheric backscatter observations from expedition ARTofMELT, Arctic Ocean, 2023 -- cloudnetpy input. Dataset version 1. Bolin Centre Database. https://doi.org/10.17043/lzv64l-1\n, LWP: ......\n, thermodynamic profile: .....'
+        cnp_fil.attrs['input_file_references'] = 'Radar: Heather Guy, Ian Brooks, Sonja Murto, Michael Tjernström, Michail Karalis, John Prytherch (2024) Cloud radar data from expedition ARTofMELT, Arctic Ocean, 2023. Dataset version 1. Bolin Centre Database. https://doi.org/10.17043/oden-artofmelt-2023-cloud-radar-1,\n Lidar: Heather Guy, Sonja Murto, Michael Tjernström, Michail Karalis, John Prytherch, Ian Brooks (2024) Cloud base heights and atmospheric backscatter observations from expedition ARTofMELT, Arctic Ocean, 2023 -- cloudnetpy input. Dataset version 1. Bolin Centre Database. https://doi.org/10.17043/lzv64l-1\n, LWP: Michael Tjernström, Sonja Murto, Michail Karalis, John Prytherch (2024) Integrated column water vapor and liquid water paths from expedition ARTofMELT, Arctic Ocean, 2023 — raw data. Dataset version 1. Bolin Centre Database. https://doi.org/10.17043/oden-artofmelt-2023-microwave-column-water-raw-1\n, thermodynamic profile: Michael Tjernström, Sonja Murto, Michail Karalis, John Prytherch (2024) Temperature and humidity profiles from microwave radiometer during expedition ARTofMELT, Arctic Ocean, 2023. Dataset version 1. Bolin Centre Database. https://doi.org/10.17043/oden-artofmelt-2023-microwave-profiles-1'
         cnp_fil.attrs['input_file_names'] = 'Radar: %s,\n Lidar: %s\n, LWP: %s\n, thermodynamic profile: %s'%(r_fil,l_fil,mwr_fil,model_fil)
         if voodoo_dir:
             cnp_fil.attrs['voodoonet_version']='%s'%(version.__version__)
         if cnp_fil.cloudnet_file_type == "categorize":
             print('Saving categorize')
+            # Mask out radar artifacts from voodoo net results
+            if 'liquid_prob' in cnp_fil.variables:
+                print('correcting artifacts in voodoo data...')
+                artifacts = pd.read_csv('./qc-files/aom_radar_artifacts.txt',parse_dates=[0,1],date_format='%Y-%m-%d %H:%M:%S')
+                var_atts = cnp_fil.variables['liquid_prob'].attrs
+                new_prob= cnp_fil.variables['liquid_prob'].to_numpy()
+                for j in range(0,len(artifacts)):
+                    d1=artifacts.iloc[j]['date1']
+                    d2=artifacts.iloc[j]['date2']
+                    h1=artifacts.iloc[j]['height1']
+                    h2=artifacts.iloc[j]['height2']
+                    bad_inds=np.where(cnp_fil.variables['liquid_prob'].where((((cnp_fil['time']>=d1) & (cnp_fil['time']<=d2)) & ((cnp_fil['height']>=h1)&(cnp_fil['height']<=h2))),other=-999).to_numpy()!=-999)
+                    new_prob[bad_inds]=0
+                    
+                cnp_fil = cnp_fil.drop_vars('liquid_prob')
+                cnp_fil = cnp_fil.assign(liquid_prob = (['time','height'],new_prob, var_atts))
+            
             cnp_fil.attrs['title'] ='Cloud categorization products from ARTofMELT 2023'
+            cnp_fil['model_height'].attrs['comment']='Note that while model_time and model_height are used in the cloudnet files, the data corresponding to these dimensions is observational data (see thermodynamic profile in input_file_references for the data source)'
+            cnp_fil['model_time'].attrs['comment']='Note that while model_time and model_height are used in the cloudnet files, the data corresponding to these dimensions is observational data (see thermodynamic profile in input_file_references for the data source)'
             cnp_fil.to_netcdf(output_dir+'categorize/cloudnet_categorize_ARTofMELT_%s_V01.nc'%date)
             cnp_fil.close()
         elif cnp_fil.cloudnet_file_type == "classification":
