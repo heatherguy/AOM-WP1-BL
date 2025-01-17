@@ -33,6 +33,7 @@ def get_args(args_in):
     5) atmospheric profile input data directory
     6) cloudnetpy output directory
     7) Use voodoo? optional LV0 directory
+    8) artifacts: directory for radar artifacts
     """   
     date = args_in[1]
     try:
@@ -47,11 +48,12 @@ def get_args(args_in):
     lwp_dir = args_in[4]
     model_dir = args_in[5]
     output_dir = args_in[6]
-    if len(args_in)>7:
-        voodoo_dir = args_in[7]
+    artifacts_dir=args_in[7]
+    if len(args_in)>8:
+        voodoo_dir = args_in[8]
     else:
         voodoo_dir=False
-    return date, radar_dir,lidar_dir,lwp_dir,model_dir,output_dir,voodoo_dir
+    return date, radar_dir,lidar_dir,lwp_dir,model_dir,output_dir,artifacts_dir,voodoo_dir
 
 def correct_voodoo_artifacts(cat,outfil):
     # Input is a cloudnet cateogorize file opened using xarray
@@ -208,7 +210,7 @@ def decimaldayofyear(date):
     
 
 def main():
-    date, radar_dir,lidar_dir,lwp_dir,model_dir,output_dir,voodoo_dir = get_args(sys.argv)
+    date, radar_dir,lidar_dir,lwp_dir,model_dir,output_dir,artifacts_dir,voodoo_dir = get_args(sys.argv)
     r_fil='RPGFMCW94_ARTofMELT_%s_radar_v1.nc'%date
     l_fil='CL31_cloudnet_ARTofMELT_%s_v01.nc'%date
     mwr_fil='%s_hatpro.nc'%date
@@ -290,7 +292,7 @@ def main():
             # Mask out radar artifacts from voodoo net results
             if 'liquid_prob' in cnp_fil.variables:
                 print('correcting artifacts in voodoo data...')
-                artifacts = pd.read_csv('./qc-files/aom_radar_artifacts.txt',parse_dates=[0,1],date_format='%Y-%m-%d %H:%M:%S')
+                artifacts = pd.read_csv(artifacts_dir,parse_dates=[0,1],date_format='%Y-%m-%d %H:%M:%S')
                 var_atts = cnp_fil.variables['liquid_prob'].attrs
                 new_prob= cnp_fil.variables['liquid_prob'].to_numpy()
                 for j in range(0,len(artifacts)):
