@@ -103,14 +103,10 @@ def correct_voodoo_artifacts(cat,outfil):
     cat.to_netcdf(outfil)
     return
 
-def replace_nan(nonan,mask):
-    #if non nan is a flat array with nans removed
-    # and mask is the orginal masked array where nans are
-    # add the nans back into nonan and return. 
-    c =  np.empty_like(mask)
-    c.fill(np.nan)
-    c[~mask] = nonan
-    return c
+def replace_nan(data, mask):
+    result = np.full(mask.shape, np.nan, dtype=float)
+    result[~mask] = data
+    return result
 
 def decode_cat(arr):
     # Bit 0: Small liquid droplets are present.
@@ -121,43 +117,51 @@ def decode_cat(arr):
     # Bit 3: Melting ice particles are present.
     # Bit 4: Aerosol particles are present and visible to the lidar.
     # Bit 5: Insects are present and visible to the radar.
-    arr_flat = arr.flatten()
-    nan_mask = np.isnan(arr_flat)
-    arr_nonan = arr_flat[~nan_mask]
-    arr_decode=[bin(int(c))[2:].zfill(6) for c in arr_nonan]
-    liq = np.asarray([int(decode[-1]) for decode in arr_decode ])
-    falling = np.asarray([int(decode[-2]) for decode in arr_decode ])
-    cold = np.asarray([int(decode[-3]) for decode in arr_decode ])
-    melting = np.asarray([int(decode[-4]) for decode in arr_decode ])
-    aerosol = np.asarray([int(decode[-5]) for decode in arr_decode ])
-    insects = np.asarray([int(decode[-6]) for decode in arr_decode ])
+    
+    nan_mask = np.isnan(arr)
+    arr_nonan = arr[~nan_mask].astype(int)  # Convert to int after NaN removal
 
-    # reinsert nans and reshape
-    liq = replace_nan(liq,nan_mask).reshape(np.shape(arr))
-    falling = replace_nan(falling,nan_mask).reshape(np.shape(arr))
-    cold = replace_nan(cold,nan_mask).reshape(np.shape(arr))
-    melting = replace_nan(melting,nan_mask).reshape(np.shape(arr))
-    aerosol = replace_nan(aerosol,nan_mask).reshape(np.shape(arr))
-    insects = replace_nan(insects,nan_mask).reshape(np.shape(arr))
+    # Preallocate output arrays
+    liq = np.zeros_like(arr, dtype=float)
+    falling = np.zeros_like(arr, dtype=float)
+    cold = np.zeros_like(arr, dtype=float)
+    melting = np.zeros_like(arr, dtype=float)
+    aerosol = np.zeros_like(arr, dtype=float)
+    insects = np.zeros_like(arr, dtype=float)
 
-    return liq,falling,cold,melting,aerosol,insects
+    # Extract bits using bitwise operations
+    liq[~nan_mask] = (arr_nonan & 0b000001) > 0
+    falling[~nan_mask] = (arr_nonan & 0b000010) > 0
+    cold[~nan_mask] = (arr_nonan & 0b000100) > 0
+    melting[~nan_mask] = (arr_nonan & 0b001000) > 0
+    aerosol[~nan_mask] = (arr_nonan & 0b010000) > 0
+    insects[~nan_mask] = (arr_nonan & 0b100000) > 0
 
-def recode_cat(liq,falling,cold,melting,aerosol,insects):
-    # flatten the input arrays
-    l=liq.flatten()
-    f=falling.flatten()
-    c=cold.flatten()
-    m=melting.flatten()
-    a=aerosol.flatten()
-    ins=insects.flatten()
+    # Restore NaNs
+    liq[nan_mask] = np.nan
+    falling[nan_mask] = np.nan
+    cold[nan_mask] = np.nan
+    melting[nan_mask] = np.nan
+    aerosol[nan_mask] = np.nan
+    insects[nan_mask] = np.nan
 
-    # Make the binary strings
-    bi_str=['%i%i%i%i%i%i'%(ins[i],a[i],m[i],c[i],f[i],l[i]) for i in range(0,len(l)) ]
-    # cal the integers
-    ints = [int(s,2) for s in bi_str]
-    # reshape
-    cat_bits=np.asarray(ints).reshape(np.shape(liq))
+    return liq.astype('bool'), falling.astype('bool'), cold.astype('bool'), melting.astype('bool'), aerosol.astype('bool'), insects.astype('bool')
+
+
+def recode_cat(liq, falling, cold, melting, aerosol, insects):
+    # Ensure inputs are NumPy arrays
+    liq, falling, cold, melting, aerosol, insects = map(np.asarray, (liq, falling, cold, melting, aerosol, insects))
+
+    # Construct integer values using bitwise operations
+    cat_bits = ((insects.astype(int) << 5) | 
+                (aerosol.astype(int) << 4) | 
+                (melting.astype(int) << 3) | 
+                (cold.astype(int) << 2) | 
+                (falling.astype(int) << 1) | 
+                (liq.astype(int)))
+
     return cat_bits
+
 
 def decode_quality(arr):
     # Bit 0: An echo is detected by the radar.
@@ -174,26 +178,35 @@ def decode_quality(arr):
     #        using the microwave radiometer measurements of liquid water path
     #        and the lidar estimation of the location of liquid water cloud;
     #        be aware that errors in reflectivity may result.
-    arr_flat = arr.flatten()
-    nan_mask = np.isnan(arr_flat)
-    arr_nonan = arr_flat[~nan_mask]
-    arr_decode=[bin(int(c))[2:].zfill(6) for c in arr_nonan]
-    radar = np.asarray([int(decode[-1]) for decode in arr_decode ])
-    lidar = np.asarray([int(decode[-2]) for decode in arr_decode ])
-    radar_clutter = np.asarray([int(decode[-3]) for decode in arr_decode ])
-    lidar_clearair = np.asarray([int(decode[-4]) for decode in arr_decode ])
-    attenuated = np.asarray([int(decode[-5]) for decode in arr_decode ])
-    atten_corrected = np.asarray([int(decode[-6]) for decode in arr_decode ])
 
-    # reinsert nans and reshape
-    radar = replace_nan(radar,nan_mask).reshape(np.shape(arr))
-    lidar = replace_nan(lidar,nan_mask).reshape(np.shape(arr))
-    radar_clutter = replace_nan(radar_clutter,nan_mask).reshape(np.shape(arr))
-    lidar_clearair = replace_nan(lidar_clearair,nan_mask).reshape(np.shape(arr))
-    attenuated = replace_nan(attenuated,nan_mask).reshape(np.shape(arr))
-    atten_corrected = replace_nan(atten_corrected,nan_mask).reshape(np.shape(arr))
+    nan_mask = np.isnan(arr)
+    arr_nonan = arr[~nan_mask].astype(int)  # Convert to int after removing NaNs
 
-    return radar,lidar,radar_clutter,lidar_clearair,attenuated,atten_corrected
+    # Preallocate output arrays
+    radar = np.zeros_like(arr, dtype=float)
+    lidar = np.zeros_like(arr, dtype=float)
+    radar_clutter = np.zeros_like(arr, dtype=float)
+    lidar_clearair = np.zeros_like(arr, dtype=float)
+    attenuated = np.zeros_like(arr, dtype=float)
+    atten_corrected = np.zeros_like(arr, dtype=float)
+
+    # Extract bits using bitwise operations
+    radar[~nan_mask] = (arr_nonan & 0b000001) > 0
+    lidar[~nan_mask] = (arr_nonan & 0b000010) > 0
+    radar_clutter[~nan_mask] = (arr_nonan & 0b000100) > 0
+    lidar_clearair[~nan_mask] = (arr_nonan & 0b001000) > 0
+    attenuated[~nan_mask] = (arr_nonan & 0b010000) > 0
+    atten_corrected[~nan_mask] = (arr_nonan & 0b100000) > 0
+
+    # Restore NaNs
+    radar[nan_mask] = np.nan
+    lidar[nan_mask] = np.nan
+    radar_clutter[nan_mask] = np.nan
+    lidar_clearair[nan_mask] = np.nan
+    attenuated[nan_mask] = np.nan
+    atten_corrected[nan_mask] = np.nan
+
+    return radar.astype('bool'), lidar.astype('bool'), radar_clutter.astype('bool'), lidar_clearair.astype('bool'), attenuated.astype('bool'), atten_corrected.astype('bool')
 
 def decimaldayofyear(date):
     '''
@@ -247,6 +260,22 @@ def main():
         # Add heathers interation version and comments. 
         cat.to_netcdf(cat_fil)
         cat.close()
+
+    # Add in present weather sensor visibility (10 min average) ##TO DO
+
+    # Adjust insect flag based on visibility ## TO DO
+
+    # Add in a ST algorithm liquid flag ## TO DO
+
+    # Add in a ST algorithm frozen precipitation flag ## TO DO
+
+    # Adjust droplet flag:  # TO DO
+    # If there's no droplets in the column by lwp>0 and ST liquid flag is set in the column
+    # Change droplet where ST liquid flag is set to true
+
+    # Recode categorisation # TO DO
+
+    # Add in some kind of warning / uncertainty flag for when classifying liquid is difficult. ## To Do
         
     # Generate classification
     uuid = generate_classification(cat_fil, output_dir+'classification/%s_classification.nc'%date)
@@ -313,6 +342,12 @@ def main():
             cnp_fil.close()
         elif cnp_fil.cloudnet_file_type == "classification":
             cnp_fil.attrs['title'] ='Cloud classification products from ARTofMELT 2023'
+
+            # Add in details about changes made to default cloudnet algorithm ## TO DO 
+            #cnp_fil.attrs['comment1']='Temperature threshold for insects has been increased relative to the default algorithm to 274 K'
+            #cnp_fil.attrs['comment2']='A vertical visibility field has been added based on 10 minute average data from the present weather sensor (doi: ...), insect classifications have been removed where visibility is < 1000 m per Achtert et al., 2020 (DOI: 10.5194/acp-20-14983-2020)'
+            #cnp.fil.attrs['comment3']='Where LWP>0 but no liquid is detected by the voodoo algorithm, the droplet bit is set for liquid pixels detected by the ST algorithm (ST_liq_flag).'
+            
             print('saving classification')
             cnp_fil.to_netcdf(output_dir+'classification/cloudnet_classification_ARTofMELT_%s_V01.nc'%date)
             cnp_fil.close()
