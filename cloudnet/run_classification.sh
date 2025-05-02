@@ -9,7 +9,9 @@ cd ~/cloudnetpy
 source venv/bin/activate
 
 # Define start and end dates
-start_date='230510'
+#start_date='230510'
+#end_date='230612'
+start_date='230611'
 end_date='230612'
 
 # Convert the start and end dates to date objects for comparison
@@ -28,7 +30,7 @@ while [ "$current_date_seconds" -le "$end_date_seconds" ]; do
     current_date_string=$(date -r "$current_date_seconds" "+%y%m%d")
 
     # Call Python function with the date string as an argument
-    python generate_classification.py "$current_date_string" "/Users/heather/cloudnetpy/data/"
+    python generate_classification.py "$current_date_string" "/Users/heather/cloudnetpy_1.46.4/data/"
     echo $current_date_string
 
     # Increment the date for the next iteration

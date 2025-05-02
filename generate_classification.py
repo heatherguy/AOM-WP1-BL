@@ -22,6 +22,35 @@ import dask
 from scipy import stats
 from voodoonet import version
 
+# ST thresholds
+#Temperature
+h_t_f=-0.3	+273.15	#Temperature distinguishing generic liquid and ice, K
+th_t_f_dr=1.0+273.15		#Temperature above which everything must be liquid phase (buffer due to T interpolation), K
+th_t_liq=-25.0	+273.15	#Lowest temperature at which all-liquid clouds can exist, K
+th_t_hom=-40.0	+273.15	#Homogeneous freezing temperature, no liquid colder, K
+#Height
+th_z_i=4.0		#Climatological height at T of th_ti, km
+th_z_f=1.0		#Climatological height at T of th_tf, km
+#Reflectivity
+th_db_low=-90.0		#Lowest acceptible reflectivity for hydrometeor return, dBZ
+th_db_snow=5.0		#Reflectivity threshold between ice cloud and snow, dBZ
+th_db_liq=-17.0 	#Reflectivity threshold between liquid cloud and drizzle/mixed, dBZ
+th_db_rain=5		#Lowest acceptible reflectivity for rain, dBZ
+#Velocity
+th_ve_liq=1.0		#Velocity threshold above which there is no cloud liquid cloud, m/s
+th_ve_rain=2.5		#Velocity threshold above which rain occurs, m/s
+th_ve_snow=1.0		#Velocity threshold above which snow occurs, m/s
+#Spectrum Width
+th_sw_liq=0.1		#Spectrum width threshold above which liquid typically occurs, m/s
+#if radarstream eq 'mos' or radarstream eq 'nsakazr' or radarstream eq 'oli' or radarstream eq 'olige' then th_sw_liq=0.25
+# Using 0.1 for RPG radar based on distribution from ARTofMELT
+
+#LWP (MWR or other)
+th_lwp=20.0 /1000.  #LWP above which there must be liquid classified in the column, kg/m2
+th_lwp_low = 5.0 /1000. # LWP below which there should be no liquid in the column. 
+#if keyword_set(lwpthresh) then th_lwp=lwpthresh   ;Modify the lwp threshold if specified by keyword. 
+
+
 def get_args(args_in):
     """
     check input arguments and return values if all looks o.k.
@@ -31,9 +60,10 @@ def get_args(args_in):
     3) lidar input data directory
     4) lwp input data directory
     5) atmospheric profile input data directory
-    6) cloudnetpy output directory
-    7) Use voodoo? optional LV0 directory
+    6) present weather sensor input data directory
+    7) cloudnetpy output directory
     8) artifacts: directory for radar artifacts
+    9) Use voodoo? optional LV0 directory
     """   
     date = args_in[1]
     try:
@@ -47,61 +77,109 @@ def get_args(args_in):
     lidar_dir = args_in[3]
     lwp_dir = args_in[4]
     model_dir = args_in[5]
-    output_dir = args_in[6]
-    artifacts_dir=args_in[7]
-    if len(args_in)>8:
-        voodoo_dir = args_in[8]
+    pw_dir = args_in[6]
+    output_dir = args_in[7]
+    artifacts_dir=args_in[8]
+    if len(args_in)>9:
+        voodoo_dir = args_in[9]
     else:
         voodoo_dir=False
-    return date, radar_dir,lidar_dir,lwp_dir,model_dir,output_dir,artifacts_dir,voodoo_dir
+    return date, radar_dir,lidar_dir,lwp_dir,model_dir,pw_dir,output_dir,artifacts_dir,voodoo_dir
 
-def correct_voodoo_artifacts(cat,outfil):
-    # Input is a cloudnet cateogorize file opened using xarray
-    # and a string to save the post-processed file. 
+#def correct_voodoo_artifacts(cat,outfil):
+#    # Input is a cloudnet cateogorize file opened using xarray    
+#    # and a string to save the post-processed file. 
+#    # This function looks for times where radar artifacts have been
+#    # manually filtered but not from the voodoo algorithm, resulting
+#    # in spurious liquid water detection from radar artifacts. 
+#    # We remove the spurious liquid and resave the categorise file. 
+#    
+#    # liquid identified from voodoo when liquid_prob > 0.55
+#    # Falling hydrometeors are radar signals that are
+#    # a) not insects b) not clutter. Furthermore, falling hydrometeors
+#    # are strong lidar pixels excluding liquid layers (thus these pixels
+#    # are ice or rain). They are also weak radar signals in very cold
+#    # temperatures.
+#
+#    # So, if liquid_prob > 0.55, and falling=0, We know that there is a radar signal
+#    # from voodoo, but no good radar signal from the reflectivity. 
+#    # Therefore these are the artificats. 
+#    # in this case if liq=1, we need to set liq=0
+#
+#    # decode
+#    liq,falling,cold,melting,aerosol,insects=decode_cat(cat['category_bits'].to_numpy())
+#
+#    # find bad liquid signals from radar artifacts
+#    condition = (liq==1) & (falling==0) & (cat['liquid_prob'].to_numpy()>0.55)
+#
+#    # modify liq
+#    mod_liq = liq.copy()
+#    mod_liq[condition]=False
+#
+#    # recode
+#    new_cat_bits = recode_cat(mod_liq,falling,cold,melting,aerosol,insects)
+#
+#    # get original attrs
+#    atts = cat['category_bits'].attrs
+#    # add a note
+#    atts['comment1']='Cleaned for bad voodoo results due to radar artifacts. If liquid_prob>0.55 and falling=0, any liq flags have been removed.'
+#
+#    # write new cat bits
+#    cat['category_bits'] = (('time','height'),new_cat_bits)
+#
+#    # add attributes
+#    cat['category_bits'].attrs.update(atts)
+#
+#    # save...
+#    #cat.to_netcdf(outfil)
+#    return cat
+
+def correct_voodoo_artifacts(cat,qcfil):
+    # Input is a cloudnet cateogorize file opened using xarray    
+    # Also the radar data qc file for masking. 
     # This function looks for times where radar artifacts have been
     # manually filtered but not from the voodoo algorithm, resulting
     # in spurious liquid water detection from radar artifacts. 
-    # We remove the spurious liquid and resave the categorise file. 
+    # We remove the spurious liquid and return the updated categorise file. 
+
+    # get radar artifacts
+    artifacts = pd.read_csv(qcfil,parse_dates=[0,1],date_format='%Y-%m-%d %H:%M:%S')
     
-    # liquid identified from voodoo when liquid_prob > 0.55
-    # Falling hydrometeors are radar signals that are
-    # a) not insects b) not clutter. Furthermore, falling hydrometeors
-    # are strong lidar pixels excluding liquid layers (thus these pixels
-    # are ice or rain). They are also weak radar signals in very cold
-    # temperatures.
-
-    # So, if liquid_prob > 0.55, and falling=0, We know that there is a radar signal
-    # from voodoo, but no good radar signal from the reflectivity. 
-    # Therefore these are the artificats. 
-    # in this case if liq=1, we need to set liq=0
-
+    # find artifacts for this day
+    day=cat.time[0].data
+    artifacts_subset=artifacts.loc[(artifacts['date1']>=(day-np.timedelta64(1, 'h'))) & (artifacts['date2']<=day+ np.timedelta64(1, 'D'))]
+    
     # decode
     liq,falling,cold,melting,aerosol,insects=decode_cat(cat['category_bits'].to_numpy())
 
-    # find bad liquid signals from radar artifacts
-    condition = (liq==1) & (falling==0) & (cat['liquid_prob'].to_numpy()>0.55)
-
-    # modify liq
+    # find and remove bad liquid signals from radar artifacts
     mod_liq = liq.copy()
-    mod_liq[condition]=False
+    mod_falling=falling.copy()
+    if len(artifacts_subset)>0:
+        print('Masking radar artifacts...')
+        for j in range(0,len(artifacts_subset)):
+            d1=artifacts_subset.iloc[j]['date1']
+            d2=artifacts_subset.iloc[j]['date2']
+            h1=artifacts_subset.iloc[j]['height1']
+            h2=artifacts_subset.iloc[j]['height2']
+            bad_inds=np.where(cat['category_bits'].where((((cat['time']>=d1) & (cat['time']<=d2)) & ((cat['height']>=h1)&(cat['height']<=h2))),other=0).to_numpy()>0)
+            mod_liq[bad_inds]=False
+            mod_falling[bad_inds]=False
 
     # recode
-    new_cat_bits = recode_cat(mod_liq,falling,cold,melting,aerosol,insects)
+    new_cat_bits = recode_cat(mod_liq,mod_falling,cold,melting,aerosol,insects)
 
     # get original attrs
     atts = cat['category_bits'].attrs
     # add a note
-    atts['comment1']='Cleaned for bad voodoo results due to radar artifacts. If liquid_prob>0.55 and falling=0, any liq flags have been removed.'
+    atts['comment1']='Cleaned for bad voodoo results due to radar artifacts.'
 
     # write new cat bits
     cat['category_bits'] = (('time','height'),new_cat_bits)
 
     # add attributes
     cat['category_bits'].attrs.update(atts)
-
-    # save...
-    cat.to_netcdf(outfil)
-    return
+    return cat
 
 def replace_nan(data, mask):
     result = np.full(mask.shape, np.nan, dtype=float)
@@ -223,7 +301,7 @@ def decimaldayofyear(date):
     
 
 def main():
-    date, radar_dir,lidar_dir,lwp_dir,model_dir,output_dir,artifacts_dir,voodoo_dir = get_args(sys.argv)
+    date, radar_dir,lidar_dir,lwp_dir,model_dir,pw_dir,output_dir,artifacts_dir,voodoo_dir = get_args(sys.argv)
     r_fil='RPGFMCW94_ARTofMELT_%s_radar_v1.nc'%date
     l_fil='CL31_cloudnet_ARTofMELT_%s_v01.nc'%date
     mwr_fil='%s_hatpro.nc'%date
@@ -247,39 +325,138 @@ def main():
     cat_fil = output_dir+'categorize/%s_categorize.nc'%date
     cat_uuid = generate_categorize(input_files, cat_fil+'_tmp')
     
-    # Correct voodoo radar artifacts
+    ## Correct voodoo radar artifacts
     if voodoo_dir: 
         print('Correcting voodoo artifacts...')
         cat = xr.open_dataset(cat_fil+'_tmp')
-        cat = correct_voodoo_artifacts(cat,cat_fil)
+        cat = correct_voodoo_artifacts(cat,artifacts_dir)
     else:
         cat = xr.open_dataset(cat_fil+'_tmp')
+    
+    # Sort variables and metdata ect
+    # Get the cloudnetpy version 
+    # Add heathers interation version and comments. 
+    
+    # Add in present weather sensor visibility (10 min average) 
+    # Get present weather sensor data
+    vis=xr.open_dataset(pw_dir+'ACAS_AoM2023_PWD_30s_v1_0.nc')
+    
+    # Adjust insect flag based on visibility 
+    print('Adjusting category bits for fog...')
+    liq,falling,cold,melting,aerosol,insects=decode_cat(cat['category_bits'].to_numpy())
+    
+    fog = np.transpose(np.tile((vis['vis_10min'].reindex(time=cat.time,method='nearest',tolerance='45s')<1000).to_numpy(),(np.shape(insects)[1],1)))
+    # Turn off insects during fog
+    insects[np.where(fog)]=False
 
-        # Sort variables and metdata ect
-        # Get the cloudnetpy version 
-        # Add heathers interation version and comments. 
-        cat.to_netcdf(cat_fil)
-        cat.close()
+    # Add in a horizontal visibility field
+    cat['horizontal_visibility'] = (('time'),vis['vis_10min'].reindex(time=cat.time,method='nearest',tolerance='45s').data)
+    hv_atts={'long_name': 'Visibility, 10 minute average', 
+             'units': 'm',
+             'source_file':'ACAS_AoM2023_PWD_30s_v1_0.nc',
+             'doi': 'https://doi.org/10.17043/oden-artofmelt-2023-present-weather-1'}
+    cat['horizontal_visibility'].attrs.update(hv_atts)
+    
+    ## Add in a ST algorithm liquid flag 
+    #print('Generating a ST liquid flag...')
+    #radar,lidar,radar_clutter,lidar_clearair,attenuated,atten_corrected=decode_quality(cat['quality_bits'].to_numpy())
+    #ST_liq=np.zeros((len(cat.time),len(cat.height)))
+    
+    # When liquid is detected by the lidar, set liquid flag to one. 
+    #lidar_liq_condition= (((lidar==1) & liq==1))
+    #radar_only_condition = (((lidar==0) & (radar==1)))
+    #radar_liq_condition= (((lidar==0) & (radar==1)) & (liq==1))
+    #ST_liq[lidar_liq_condition]=1
+    
+    # If wbt > t_thres, force liquid
+    #ST_liq[(radar_only_condition & ((cat['Tw'].data>th_t_f_dr)))]=1
+    
+    # For below freezing: 
+    #below_freezing=((cat['Tw'].data<th_t_f_dr))
+    
+    # liquid
+    # spec with is greater than than threshold
+    # reflectivity is less than that of ice cloud
+    # velocity is small
+    #wh= ((cat['width'].data > th_sw_liq) & ((cat['Z'].data < th_db_liq) & (-cat['v'] < th_ve_liq)))
+    #ST_liq[below_freezing & wh]=1
+    
+    # mixed phase
+    # spec width greater than threshold, 
+    # reflectivity greater than liquid cloud only threshold
+    # or velocity greater than liquid cloud only threshold
+    # Note shupes sign convention for velocity is different (positive downards)
+    #whm = ((cat['width'].data > th_sw_liq) & (((cat['Z'].data>th_db_liq) | (-cat['v'].data>th_ve_liq))))
+    #ST_liq[below_freezing & whm]=1
 
-    # Add in present weather sensor visibility (10 min average) ##TO DO
-
-    # Adjust insect flag based on visibility ## TO DO
-
-    # Add in a ST algorithm liquid flag ## TO DO
-
-    # Add in a ST algorithm frozen precipitation flag ## TO DO
-
-    # Adjust droplet flag:  # TO DO
-    # If there's no droplets in the column by lwp>0 and ST liquid flag is set in the column
+    # Turn off ST liquid flag if there's no LWP detected. 
+    #ST_liq[cat['lwp'].to_numpy() < th_lwp_low]=0
+    #ST_liq[np.transpose(np.tile((cat['lwp'].to_numpy() < 0.005), (np.shape(cat['Z'])[1],1)))]=0
+    
+    # Adjust droplet flag:
+    # If there's no droplets in the column and lwp>20 gm-2 and ST liquid flag is set in the column
     # Change droplet where ST liquid flag is set to true
+    # Using xx pixels as a minimum number for 'droplets in the column' for now - might want to check sensitivity for this and see what's reasonable. 
+    #use_st_liq=(((np.sum(liq,axis=1)<3) & (np.sum(ST_liq,axis=1)>3) ) & (cat['lwp'].to_numpy()>th_lwp))
+    #liq[use_st_liq,:]=ST_liq[use_st_liq,:]
+    #using_st_liq_flag = np.zeros(len(use_st_liq))
+    #using_st_liq_flag[use_st_liq]=1
+    
+    # # Add in a ST algorithm frozen precipitation flag ## TO DO
+    # Could also think about including present weather data in this, or MRR data
+    #ST_frozen_precip=np.zeros((len(cat.time),len(cat.height)))
+    # For temperautre less than zero
+    # Use reflectivity thresold for snow
+    #ST_frozen_precip[(((cat['Tw'].data<th_t_f_dr) & (cat['Z'].data>th_db_snow)))] = 1
+    
+    # Recode categorisation 
+    new_cat_bits = recode_cat(liq,falling,cold,melting,aerosol,insects)
 
-    # Recode categorisation # TO DO
-
-    # Add in some kind of warning / uncertainty flag for when classifying liquid is difficult. ## To Do
-        
+    # To do: Add in a SLDR threshold?
+    
+    # write new cat bits
+    # get original attrs
+    atts = cat['category_bits'].attrs
+    cat['category_bits'] = (('time','height'),new_cat_bits)
+    
+    # add attributes
+    # add a note
+    atts['comment2']='Removed false insect detection during fog events.'
+    #atts['comment3']='Using Shupe-Turner algorithm liquid identification when LWP>%.1f g/m2 but otherwise no liquid is identified in the column. See variables ST_drop_flag for where this has been implemented.'%(th_lwp*1000.)
+    cat['category_bits'].attrs.update(atts)
+    
+    # Add in some kind of warning / uncertainty flag for when classifying liquid is difficult. ## To Do.....
+    
+    # Add new variables into the categorisation file
+    #cat = cat.assign(ST_drop_flag=(('time'),
+    #                         using_st_liq_flag,
+    #                         {'long_name':'Flag indicating where the droplet bit is derived from the Shupe-Turner algorithm',
+    #                          'description':'1: droplet bit derived from Shupe-Turner algorithm, 0: droplet bit dervied using cloudnet defaults (including voodoo if voodoo is used)',
+    #                          'comment':'Using Shupe-Turner algorithm for liquid identification when LWP>%.1f g/m2 but otherwise no liquid is identified in the column. The thresholds used for the ST algorithm are: spectral width %.1f m/s, reflectivity %.1f dBz, and vertical velocity %.1f m/s'%(th_lwp*1000.,th_sw_liq,th_db_liq,th_ve_liq),
+    #                          'units':1,}))
+    #cat = cat.assign(ST_drop=(('time','height'),
+    #                    ST_liq,
+    #                    {'long_name':'Pixels idenfied as containing liquid or mixed phase particles using the Shupe-Turner algorithm.',
+    #                     'description':'1: pixel identified as containing liquid or mixed-phase particles, 0: pixel does not contain liquid or mixed-phase particles',
+    #                     'comment':'The thresholds used for the ST algorithm to identify liquid or mixed-phase pixels from radar data are: spectral width %.1f m/s, reflectivity %.1f dBz, and vertical velocity %.1f m/s, see doi:10.1029/2007GL031008 for further details. Note that this flag is automatically set to 1 when lidar data is available and liquid is detected from the lidar using the cloudnet algorithm'%(th_sw_liq,th_db_liq,th_ve_liq),
+    #                          'units':1,
+    #                    }))
+    #cat = cat.assign(ST_frozen_precip=(('time','height'),
+    #                             ST_frozen_precip,
+    #                             {'long_name':'Pixels idenfied as containing snow or falling frozen precipitation using the Shupe-Turner algorithm.',
+    #                              'description':'1: pixel identified as containing frozen precipitation, 0: pixel does not contain frozen precipitation',
+    #                              'comment':'The reflectivity threshold used by the ST algorithm to seperate cloud ice from frozen precipitation is >%.1f dBZ. See doi:10.1029/2007GL031008 for further details.'%th_db_snow,
+    #                              'units':1,}))
+    
+    
+    # Save and close the updated cat file temporarily before generating the classification
+    cat.to_netcdf(cat_fil)
+    cat.close()
+    
+    
     # Generate classification
     uuid = generate_classification(cat_fil, output_dir+'classification/%s_classification.nc'%date)
-
+    
     # Add in metadata ect. 
     classi=xr.open_dataset(output_dir+'classification/%s_classification.nc'%date)
     cat=xr.open_dataset(cat_fil)
@@ -289,9 +466,9 @@ def main():
         cnp_fil = cnp_fil.assign(day_of_year = (['time'],[decimaldayofyear(t) for t in cnp_fil.time.data], {'units':"1",'long_name':"Day of Year",'description':"time as decimal day of year"}))
         #cnp_fil['time'].attrs['_FillValue']=False
         
-        # delte obsolete data
+        # delete obsolete data
         del cnp_fil.attrs['source_file_uuids']
-        del cnp_fil.attrs['location']
+        cnp_fil.attrs['location'] = 'ARTofMELT'
         cnp_fil.attrs['creator_name'] =	'Heather Guy'
         cnp_fil.attrs['creator_email'] =	'heather.guy@ncas.ac.uk'
         cnp_fil.attrs['creator_url'] =	'https://orcid.org/0000-0003-3525-0766'
@@ -316,6 +493,8 @@ def main():
         cnp_fil.attrs['input_file_names'] = 'Radar: %s,\n Lidar: %s\n, LWP: %s\n, thermodynamic profile: %s'%(r_fil,l_fil,mwr_fil,model_fil)
         if voodoo_dir:
             cnp_fil.attrs['voodoonet_version']='%s'%(version.__version__)
+            #cnp_fil.attrs['voodoonet_model']='RPG_merged_cloudy_trained-model.pt'
+            cnp_fil.attrs['voodoonet_model']='RPG_merged_cloudy_resampledv_trained-model.pt'
         if cnp_fil.cloudnet_file_type == "categorize":
             print('Saving categorize')
             # Mask out radar artifacts from voodoo net results
@@ -338,15 +517,17 @@ def main():
             cnp_fil.attrs['title'] ='Cloud categorization products from ARTofMELT 2023'
             cnp_fil['model_height'].attrs['comment']='Note that while model_time and model_height are used in the cloudnet files, the data corresponding to these dimensions is observational data (see thermodynamic profile in input_file_references for the data source)'
             cnp_fil['model_time'].attrs['comment']='Note that while model_time and model_height are used in the cloudnet files, the data corresponding to these dimensions is observational data (see thermodynamic profile in input_file_references for the data source)'
+            
+            # Add in details about changes made to default cloudnet algorithm ## TO DO 
+            cnp_fil.attrs['comment1']='Temperature threshold for insects has been increased relative to the default algorithm to 274 K'
+            cnp_fil.attrs['comment2']='A horizontal visibility field has been added based on 10 minute average data from the present weather sensor (doi: 10.17043/oden-artofmelt-2023-present-weather-1), insect classifications have been removed where visibility is < 1000 m per Achtert et al., 2020 (DOI: 10.5194/acp-20-14983-2020)'
+            #cnp.fil.attrs['comment3']='Where LWP>0 but no liquid is detected by the voodoo algorithm, the droplet bit is set for liquid pixels detected by the ST algorithm (ST_liq_flag).'
+            
             cnp_fil.to_netcdf(output_dir+'categorize/cloudnet_categorize_ARTofMELT_%s_V01.nc'%date)
             cnp_fil.close()
+        
         elif cnp_fil.cloudnet_file_type == "classification":
             cnp_fil.attrs['title'] ='Cloud classification products from ARTofMELT 2023'
-
-            # Add in details about changes made to default cloudnet algorithm ## TO DO 
-            #cnp_fil.attrs['comment1']='Temperature threshold for insects has been increased relative to the default algorithm to 274 K'
-            #cnp_fil.attrs['comment2']='A vertical visibility field has been added based on 10 minute average data from the present weather sensor (doi: ...), insect classifications have been removed where visibility is < 1000 m per Achtert et al., 2020 (DOI: 10.5194/acp-20-14983-2020)'
-            #cnp.fil.attrs['comment3']='Where LWP>0 but no liquid is detected by the voodoo algorithm, the droplet bit is set for liquid pixels detected by the ST algorithm (ST_liq_flag).'
             
             print('saving classification')
             cnp_fil.to_netcdf(output_dir+'classification/cloudnet_classification_ARTofMELT_%s_V01.nc'%date)
