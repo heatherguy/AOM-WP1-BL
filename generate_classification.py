@@ -468,7 +468,7 @@ def main():
         
         # delete obsolete data
         del cnp_fil.attrs['source_file_uuids']
-        cnp_fil.attrs['location'] = 'ARTofMELT'
+        cnp_fil.attrs['location'] = 'Icebreaker Oden, Fram Strait'
         cnp_fil.attrs['creator_name'] =	'Heather Guy'
         cnp_fil.attrs['creator_email'] =	'heather.guy@ncas.ac.uk'
         cnp_fil.attrs['creator_url'] =	'https://orcid.org/0000-0003-3525-0766'
